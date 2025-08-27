@@ -1,5 +1,5 @@
-# sys-scan agent baseline configuration (Phase 10)
-# All keys optional; defaults shown. Adjust and commit to version control for reproducibility.
+# sys-scan Intelligence Layer configuration
+# All keys optional; defaults shown. Commit for reproducible enrichment behavior.
 
 weights:
   # Risk weighting factors (can also override via env: AGENT_WEIGHT_IMPACT, etc.)
@@ -8,39 +8,40 @@ weights:
   anomaly: 1.0
 
 thresholds:
-  # Sum of risk_total for medium+ findings below this (and no new findings) => skip expensive summarization
+  # If summed risk_total (or fallback risk_score) of MEDIUM+ findings is below this AND there are no baseline:new findings => skip LLM/executive summarization stage
   summarization_risk_sum: 150
-  # Distance threshold for process novelty clustering
+  # Cosine (or configured) distance threshold for process novelty clustering
   process_novelty_distance: 0.35
-  # Z-score threshold for metric drift synthetic findings
+  # Absolute Z-score threshold beyond which metric drift synthetic findings are emitted
   metric_drift_z: 2.5
 
 performance:
-  # Enable light parallelization for process novelty feature vector generation
+  # Enable parallel feature vector computation for novelty analysis (False favors determinism under legacy interpreters)
   parallel_baseline: true
-  # Worker threads (CPU bound but lightweight hashing)
+  # Worker threads (CPU bound but lightweight hashing / parsing)
   workers: 4
 
 paths:
-  # Additional rule directories (loaded & cached with mtime checks). Example: ["rules/custom", "rules/experimental" ]
+  # Additional rule directories (loaded & cached with mtime checks).
+  # Example: ["rules/custom", "rules/experimental" ]
   rule_dirs: []
-  # Additional executable allowlist paths merged with file + env sources
+  # Additional executable allowlist paths merged with file + env sources (policy_allowlist.yaml + AGENT_POLICY_ALLOWLIST)
   policy_allowlist: []
 
 notifications:
-  # Slack incoming webhook URL (omit / leave null to disable). Example: https://hooks.slack.com/services/T000/B000/XXXXX
+  # Slack incoming webhook URL (leave null to disable). Example: https://hooks.slack.com/services/T000/B000/XXXXX
   slack_webhook: null
-  # Generic alternative webhook (JSON POST {"text": message}) used if slack_webhook unset
+  # Generic alternative webhook (POST JSON: {"text": "..."}) used if slack_webhook unset
   webhook: null
-  # Trigger notification when average probability_actionable delta >= this OR new high severity baseline:new finding
+  # Trigger notification if avg probability_actionable delta >= threshold OR any new HIGH+ baseline:new finding
   actionable_delta_threshold: 0.15
 
 reports:
-  # Generate static HTML artifact (no external JS)
+  # Generate static HTML artifact (no external JS). Disable to reduce CI artifact volume.
   html_enabled: true
   html_path: enriched_report.html
   diff_markdown_path: enriched_diff.md
 
 bundle:
-  # Manifest file capturing version, rule pack SHA, embedding model hash, weights
+  # Manifest file capturing version, rule pack SHA, embedding model hash, and weights snapshot
   manifest_path: manifest.json

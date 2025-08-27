@@ -1,30 +1,44 @@
 # sys-scan
 
-![CI](https://github.com/J-mazz/sys-scan/actions/workflows/ci.yml/badge.svg) ![License: Hybrid](https://img.shields.io/badge/License-Hybrid-blue.svg)
+![CI](https://github.com/J-mazz/sys-scan/actions/workflows/ci.yml/badge.svg) ![License: Core MIT / Intelligence Proprietary](https://img.shields.io/badge/License-Open--core%20Hybrid-blue.svg)
 
-I started sys-scan as a way to refine my C++ skills and practice prompt engineering while creating something genuinely useful for myself as a Linux user and for the small network of machines I administer. I initially used GitHub Copilot in agent mode to scaffold the project, then manually refactored and extended it with new features, relying on Copilot only as an assistant rather than the driver for most of the development. I’m still learning C++, and this project has been a hands-on way to grow while building a tool I hope others will also find valuable. I plan to keep expanding sys-scan, and I welcome contributions from anyone interested in practical, free security utilities.
+Professional host security & hygiene assessment built on a lean, deterministic C++20 scanning engine. The open‑core scanner delivers trustworthy, reproducible telemetry; an optional proprietary Intelligence Layer (this fork) transforms that raw signal into correlated insights, baselines, rarity analytics, compliance gap normalization, ATT&CK coverage summaries, and executive reporting.
 
-Modern C++20 Linux system security & hygiene scanner (Debian/Ubuntu oriented, broadly portable). Focus: high‑signal, low‑noise findings + deterministic, attestable artifacts.
+This codebase intentionally enforces a **clean boundary**:
+* `src/`, `rules/`, `schema/`  – Open‑core scanner (MIT). Upstream reference: https://github.com/J-mazz/sys-scan
+* `agent/` – Proprietary Intelligence Layer (evaluation / commercial license). Not required for basic scanning. All enrichment happens post‑collection from stable JSON interfaces.
+
+Why this design:
+* Predictable, attestable core artifact (deterministic canonical JSON & reproducible build knobs)
+* Safe consumption in regulated pipelines (no outbound network activity by default)
+* Pluggable enrichment surface (rules, schemas, post‑processors) enabling differentiated value without forking core logic
+
+Key value propositions:
+* High‑signal grouped findings (noise compression at collection time)
+* Deterministic canonical output → hash, sign, attest, diff reliably
+* Extensible rule engine & compliance scaffolding
+* Optional advanced analytics (rarity, correlation, HTML & diff reports) without bloating the core binary
+* Explicit security hardening (cap drop, seccomp, provenance metadata)
 
 ---
 ## Table of Contents
 1. Quick Start
-2. Feature Highlights
-3. Core Scanners
-4. Output & Formats
-5. Rules Engine
-6. Privacy & Noise Reduction
-7. Security Hardening Model
-8. Determinism, Reproducibility & Provenance
+2. Intelligence Layer Overview
+3. Core Feature Highlights
+4. Scanner Inventory
+5. Output Contracts (JSON / NDJSON / SARIF)
+6. Rules & Open Interfaces
+7. Determinism & Provenance
+8. Security & Hardening
 9. Risk & Severity Model
 10. Schema & Versioning
 11. Build & Install
-12. Usage Scenarios & Recipes
+12. Usage Recipes
 13. CI / Pipeline Integration
-14. Examples (JSON / NDJSON / SARIF snippets)
-15. Advanced Flags Reference
-16. Roadmap & Ideas
-17. License & Usage
+14. Examples
+15. Advanced Flags
+16. Roadmap (Core & Intelligence)
+17. Licensing Model
 
 ---
 ## 1. Quick Start
@@ -47,21 +61,59 @@ Minimal pipelines (stdout):
 ```
 
 ---
-## 2. Feature Highlights
-* High‑level summary + per‑scanner grouping reduces alert fatigue.
-* Dual metrics: total vs emitted (post filter) counts & risk scores.
-* Deterministic canonical JSON for hashing/signing / SBOM-like workflows.
-* Optional NDJSON streaming & SARIF 2.1.0 export.
-* Extensible rule engine (regex + structured conditions) for enrichment & MITRE tagging.
-* Security hardening: capability drop, optional seccomp sandbox.
-* Provenance block (compiler, commit, flags, SLSA level) with runtime overrides.
-* Reproducibility toggles & timestamp zeroing (`SYS_SCAN_CANON_TIME_ZERO=1`).
-* Optional multi-standard compliance assessment (PCI DSS 4.0, HIPAA Security Rule, NIST CSF 2.0) with summarized pass/fail/score metrics (Core emits structured compliance_summary).
-* Gap analysis mode producing focused `compliance_gaps` with remediation hints & normalized severities (Core + Intelligence Layer enrichment).
-* Fast: avoids expensive full file reads (bounded hashing window, selective parsing).
+## 2. Intelligence Layer Overview
+Although the scanning engine is intentionally compact, the bulk of the product value lives in the Intelligence Layer which provides advanced enrichment and reporting capabilities beyond raw collection.
+
+### What It Does
+| Capability | Purpose | Outcome |
+|------------|---------|---------|
+| Typed ingestion & schema validation | Parse stable core JSON into versioned Pydantic models | Forward compatibility & safety gates |
+| Baselining & rarity scoring | Persist historical observation vectors (SQLite) | Surface statistically rare changes, suppress churn |
+| Deterministic correlation graph | Link related low-signal findings into composite hypotheses | Higher precision, reduced alert fatigue |
+| Compliance gap normalization | Map raw control signals to unified gap taxonomy | Consistent remediation meta across frameworks |
+| Rule enrichment & MITRE coverage | Aggregate technique tags & fill coverage matrices | Fast ATT&CK reporting, gap views |
+| Risk re-scoring & prioritization | Multi-factor weighting (rarity, severity, temporal decay) | Ordered remediation queue |
+| HTML / diff / executive reports | Multi-audience formatted outputs (tech ops, exec) | Accelerated decision cycles |
+| Redaction & privacy filters | Remove / hash sensitive fields pre-export | Safer sharing & ticketing |
+| Counterfactual & refinement utilities | Suggest rule adjustments / redundancy pruning | Leaner rule sets over time |
+| (Optional) Summarization adapters | Deterministic prompt scaffolding (LLM off by default) | Human-readable context where enabled |
+
+### Pipeline Flow (Conceptual)
+```
+ Core JSON -> Loader -> Validation -> (Baseline Store ↔ Rarity Engine)
+				  |                
+				  v
+			 Correlation Layer -> Risk Scoring -> Compliance Normalizer
+				  |                                 |
+				  +----------> Coverage Matrix <----+
+				  |
+				  v
+			  Report Builders (HTML / Diff / JSON+)
+				  |
+			  Redaction & Export Adapters
+```
+
+### Design Tenets
+* Pure consumer: never mutates core collection logic.
+* Deterministic first: identical inputs + state snapshot → identical outputs (facilitates reproducible investigations).
+* Extensible modules: new enrichment stages register declaratively; graph orchestration (fork) prototypes inform future DAG upgrade.
+* Safe offline default: no outbound network; optional remote augmentation is additive & opt-in.
+
+If you only need a fast, attestable scan artifact, use the core. If you need prioritized, contextual, privacy-aware security narrative, enable the Intelligence Layer.
+
+## 3. Core Feature Highlights
+* High‑signal grouping & dual metrics (total vs emitted) reduce alert fatigue.
+* Deterministic canonical JSON (RFC8785 subset) + optional timestamp zeroing → stable cryptographic hashes.
+* Multiple emissions: JSON, NDJSON streaming (pipeline friendly), SARIF 2.1.0.
+* Declarative rule engine (multi‑condition, regex, severity override, MITRE aggregation).
+* Optional compliance scanners (PCI DSS 4.0, HIPAA, NIST CSF) with summarized pass/fail & gap arrays.
+* Experimental eBPF exec trace (`--ioc-exec-trace`) augments IOC heuristics (soft‑fail if unavailable).
+* Built‑in hardening: capability drop, seccomp (opt), reproducible build flags, provenance embeddings.
+* Strictly local collection: zero outbound network calls by default.
+* Clean API surface (schemas + rules) enabling innovation in proprietary enrichment without polluting core.
 
 ---
-## 3. Core Scanners
+## 4. Scanner Inventory
 | Scanner | Focus | Notable Signals |
 |---------|-------|-----------------|
 | Process | Userland processes | Deleted executables, temp exec, env LD anomalies, executable hashing (opt) |
@@ -74,10 +126,11 @@ Minimal pipelines (stdout):
 | MAC | SELinux/AppArmor status | Missing MAC, downgrade logic if one present |
 | Compliance (opt) | PCI / HIPAA / NIST CSF controls | Pass/fail aggregation + gap analysis (when enabled) |
 | Integrity (opt) | Future pkg/IMA | Placeholders for package & IMA measurement stats |
+| Exec Trace (opt) | eBPF execve events | Short‑lived process capture window (libbpf, optional) |
 | Rules | Post-processing layer | MITRE tagging, severity escalation |
 
 ---
-## 4. Output & Formats
+## 5. Output Contracts
 Base JSON always contains:
 * `meta` – environment + provenance.
 * `summary` – dual counts, severities, timings, slowest scanner.
@@ -91,7 +144,7 @@ Optional:
 * `--sarif` produces SARIF for code scanning ingestion.
 
 ---
-## 5. Rules Engine
+## 6. Rules & Open Interfaces
 Capabilities:
 * Declarative rule files (`.rule`) with `rule_version` guard.
 * AND/OR logic; equality, regex (`~=`), substring future extension.
@@ -162,7 +215,7 @@ cmake --build build -j$(nproc)
 Debian packaging skeleton under `debian/` (invoke standard `dpkg-buildpackage` flow) – future refinement may add signed packages / provenance embedding.
 
 ---
-## 12. Usage Scenarios & Recipes
+## 12. Usage Recipes
 | Scenario | Command |
 |----------|---------|
 | Quick hygiene sweep | `./sys-scan --modules-summary --min-severity medium` |
@@ -259,7 +312,10 @@ Streaming to SARIF‑aware platforms:
 > Placeholder for future screenshot: (SARIF ingestion view)
 
 ---
-## 16. Roadmap & Ideas
+## 16. Roadmap (Core & Intelligence)
+Core (MIT): performance refinements, additional scanners (package integrity, process ancestry anomalies), finer-grained seccomp profile, structured warning channel, parallel scanner execution.
+
+Intelligence (Proprietary): DAG orchestration promotion (graph mode), probabilistic risk calibration, richer counterfactual explanations, temporal drift clustering, multi-host fleet aggregation, adaptive suppression suggestions, signed enriched artifact chain.
 See also inline comments / issues. Near‑term concepts:
 * Extended risk scoring calibrations.
 * Package integrity (dpkg/rpm verify) & mismatch aggregation.
@@ -268,43 +324,19 @@ See also inline comments / issues. Near‑term concepts:
 * Enhanced network exposure heuristics & fan‑out thresholds.
 * Additional output signing backends (cosign, age).
 
-### Intelligence Layer (Agent MVP – Proprietary)
+## 17. Licensing Model
+Open‑core hybrid:
+* Core scanner (everything required to build and run `sys-scan` under `src/`, plus `rules/`, `schema/`) – MIT License (SPDX: MIT). Upstream canonical repository: https://github.com/J-mazz/sys-scan
+* Intelligence Layer (`agent/` and its Python dependencies, enrichment logic, HTML & diff reporting) – Proprietary. Evaluation / commercial terms govern redistribution & derivative works of this directory.
 
-An experimental Python intelligence layer prototype now lives under `agent/` providing:
-* Schema validation & typed parsing (Pydantic subset + extensions: host_id, scan_id, tags, risk_subscores)
-* Deterministic correlation (Phase 1 simple rules distinct from C++ emission-time rules)
-* Baseline-ready design (SQLite store scaffold in `baseline.py`)
-* Cost / token reduction (module, SUID, network summarizers) prior to any LLM usage
-* Stub LLM summarizer (deterministic) with pluggable future LangGraph integration
-* Structured enriched artifact (correlations, reductions, actions, summaries)
+Separation Principles:
+* Build of the core binary never links or imports proprietary code.
+* Proprietary layer only reads JSON / NDJSON / SARIF produced by the MIT core.
+* Removal of `agent/` yields a clean MIT codebase with unchanged deterministic hashes.
 
-Quick start:
-```bash
-python -m venv agent/.venv
-source agent/.venv/bin/activate
-pip install -r agent/requirements.txt
-./build/sys-scan --pretty --output report.json
-python -m agent.cli analyze --report report.json --out enriched_report.json
-jq '.summaries.executive_summary' enriched_report.json
-```
+Contribution Scope: External contributions are welcomed for the MIT core (performance, new scanners, rule engine improvements). Proprietary enrichment roadmap is managed privately.
 
-Planned next phases:
-1. Integrate LangGraph stateful nodes (stream partial reductions as scanners finish)
-2. Baseline diff persistence (host_id + finding identity hash) feeding rarity scoring
-3. Expanded deterministic correlations (multi-finding joins, exposure scoring)
-4. Allowlist & rarity-driven risk_subscores feeding revised composite risk formula
-5. Multi-format outputs (analyst markdown, slack snippet, remediation playbook YAML)
-6. Action planner triggering optional secondary collection tasks
-
-This layer stays optional and out-of-path for the core C++ scanner; it consumes the existing stable JSON. It is distributed under a proprietary license (see `LICENSE`) while the Core scanner remains MIT.
-
----
-## 17. License & Usage
-Hybrid model:
-* Core scanner (C++ code under `src/`, schemas, rules) – MIT License.
-* Intelligence Layer (`agent/`) – Proprietary (internal evaluation use only unless separately licensed).
-
-See `LICENSE` for full hybrid terms and SPDX identifiers.
+See `LICENSE` for the MIT notice and proprietary notice headers.
 
 
 ## CLI Overview

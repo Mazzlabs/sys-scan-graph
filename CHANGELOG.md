@@ -3,6 +3,7 @@
 All notable changes will be documented in this file.
 
 ## [Unreleased]
+Note: Experimental work that had been tagged `v0.2.0` (including early commercialization / graph orchestration prototypes) was relocated to a proprietary fork. This open‑core line continues from the 0.1.x series; entries below reflect changes applicable to the MIT Core scanner only. Proprietary Intelligence Layer enhancements are tracked privately and do not alter the core binary interface.
 ### Added
  - Dual metrics & risk scoring: `finding_count_total` vs `finding_count_emitted`, `severity_counts` vs `severity_counts_emitted`, and `emitted_risk_score` in `summary_extension`.
  - Provenance metadata block (`meta.provenance`) with compiler id/version, git commit, cxx standard, cxx flags, build type, SLSA level (baked & runtime override via `--slsa-level`).
@@ -26,6 +27,7 @@ All notable changes will be documented in this file.
 ### Security
  - Added capability dropping and seccomp sandbox (deny-by-default allowlist) with optional strict mode.
  - Embedded provenance improves supply-chain auditability & attestation readiness.
+ - Clarified open‑core vs proprietary layer boundary (no proprietary code paths executed in core binary).
 
 ### Fixed
  - Canonical hash instability resolved (deterministic environment overrides & timestamp zeroing).

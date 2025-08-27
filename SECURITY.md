@@ -1,28 +1,27 @@
 # Security Policy
 
+This document covers the **open‑core scanner** (MIT). The proprietary Intelligence Layer (`agent/`) performs post‑processing only; vulnerabilities confined exclusively to proprietary enrichment logic follow a separate private response process and are out of public scope unless they materially impact core output integrity.
+
 ## Supported Versions
 
-| Version | Supported |
-|---------|-----------|
-| `main` (0.1.x dev) | ✅ Security fixes
-| Pre-release commits before initial tag | ✅ (best effort)
-| Future tagged releases (>=1.0) | (Will list once tagged)
+| Track | Scope | Supported |
+|-------|-------|-----------|
+| `main` (0.1.x dev) | Core scanner | ✅ Security & correctness fixes (rolling)
+| Pre‑0.1.0 historical commits | Core scanner | Best effort (upgrade recommended)
+| Proprietary Intelligence Layer | Enrichment | Private channel (commercial / evaluation agreements)
 
-> Until a 1.0.0 release, the project follows a rolling security support model: the `main` branch is the only supported line.
+Until a 1.0.0 semantic milestone the project maintains a single rolling support line on `main` for the core.
 
-## Reporting a Vulnerability
+## Reporting a Vulnerability (Core)
 
-Please **do not open a public GitHub Issue for security problems**.
+Please **do not open a public issue** for potential security problems.
 
-Use one of these private channels instead:
+Preferred channel (core):
+1. GitHub Security Advisory draft: https://github.com/J-mazz/sys-scan/security/advisories/new
 
-1. **GitHub Security Advisory (preferred)**  
-   Open a draft advisory here: https://github.com/J-mazz/sys-scan/security/advisories/new  
-   This creates a private workspace where we can discuss details and coordinate a fix & disclosure timeline.
+Fallback: email joseph@mazzlabs.works with: affected commit/version, reproduction steps, impact, suggested remediation.
 
-2. **Email (fallback)**  
-   If you cannot use advisories, email: joseph@mazzlabs.works  
-   Please include: affected version / commit, environment, reproduction steps, impact assessment, and any suggested fixes.
+Proprietary layer issues: use the private commercial support channel specified in your agreement (or the same email referencing your license). Disclose only the minimal technical detail needed for triage if uncertain which layer is impacted.
 
 ## What to Expect
 
@@ -35,18 +34,19 @@ Use one of these private channels instead:
 
 If you do not receive a response within the acknowledgment window, feel free to gently follow up or (as a last resort) open a minimal issue referencing that you attempted private contact (without disclosing details).
 
-## Scope
+## Scope (Public Core)
 
-In scope:
-- Logic / parsing errors leading to privilege escalation, info leak, DoS, or code execution
-- Unsafe temporary file usage
-- Path traversal or symlink race issues in scanners
-- Insecure handling of world-writable / user-influenced data
+In Scope:
+* Logic / parsing errors enabling privilege escalation, info leak, denial of service, or code execution within the scanning process
+* Unsafe temp file usage or race conditions (TOCTOU) in scanners
+* Path traversal / symlink attacks within collection code paths
+* Integrity compromise of canonical JSON output (spoofed provenance, ordering manipulation, injection of unbounded user-controlled data)
 
-Out of scope (unless clearly exploitable):
-- Cosmetic output issues
-- Performance inefficiencies
-- False positives / false negatives in heuristic scanners (submit as normal issues)
+Out of Scope (Core) unless chainable to impact:
+* Pure cosmetic output formatting issues
+* Heuristic false positives / false negatives (file a regular issue)
+* Performance optimizations absent explicit resource exhaustion
+* Vulnerabilities strictly within proprietary enrichment (handled privately)
 
 ## Handling & Disclosure
 
@@ -54,15 +54,16 @@ Out of scope (unless clearly exploitable):
 - Credit will be given in release notes unless you request anonymity.
 - We may backport critical fixes if/when multiple maintained release lines exist.
 
-## Hardening Roadmap (Security Related)
-- Add sandboxing (seccomp / pledge-like restrictions) for network & IOC scanning phases
-- Introduce optional file hashing & integrity verification
-- Add comprehensive input bounds checks and fuzz harnesses (libFuzzer/AFL++)
-- Continuous static analysis (clang-tidy, CodeQL)
+## Hardening Roadmap (Core)
+* Expand seccomp profile granularity & tighten allowed syscalls per phase
+* Landlock / user namespace isolation exploration (optional flag)
+* Broader file integrity verification (package db cross‑checks)
+* Additional fuzz harnesses (scanner parsers & rule engine) beyond existing rules fuzzer
+* Continuous static analysis (clang‑tidy gating, CodeQL queries expansion)
 
 ## Responsible Use
 
-This tool enumerates sensitive system metadata. Use only on systems you are authorized to assess.
+The scanner enumerates sensitive host configuration & runtime data. Operate only on systems you are explicitly authorized to assess. Downstream enrichment MUST preserve confidentiality constraints present at collection time.
 
 ---
 If you have suggestions to improve this policy, open a regular issue (non-sensitive) or include them in an advisory thread.

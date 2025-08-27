@@ -1,15 +1,36 @@
 # Architecture
 
 ## Overview
-`sys-scan` is a single-binary host inspection tool composed of pluggable *Scanner* units that populate a shared `Report`. Output is deterministic JSON (schema versioned) containing a summary plus per‑scanner results.
+`sys-scan` (Core) is a single-binary Linux host inspection engine composed of pluggable *Scanner* units that populate a shared in‑memory `Report`. It produces deterministic, schema‑versioned JSON suitable for hashing, signing, attestation, diffing, or downstream enrichment. An optional proprietary Intelligence Layer (Python, under `agent/`) ingests that JSON strictly as a read‑only contract—there is no runtime coupling back into core collection routines.
 
-## Core Components
-- Scanner interface (`Scanner` in `core/Scanner.h`): name(), description(), scan(Report&).
-- Registry (`ScannerRegistry`): Instantiates and runs all default scanners in sequence (currently single‑threaded for predictable ordering & deterministic JSON).
-- Report (`Report`): Thread-safe append-only container of `ScanResult` objects (mutex protected) to allow future parallelization.
-- Finding model: Plain struct with `id`, `title`, `severity` (string), `description`, and sorted `metadata` map for stable output ordering.
-- Config (`Config`): Parsed once in `main.cpp`, stored globally (singleton pattern via `config()` accessor). Provides feature flags & thresholds.
-- JSONWriter: Builds canonical string, minifies, then optionally pretty‑prints. Adds `tool_version` and `json_schema_version` for forward compatibility. Emits optional `compliance_summary` and (when gap analysis enabled) `compliance_gaps` with remediation hint scaffolding.
+```
+         +---------------------------+
+         |        Intelligence       |  (Proprietary Python)
+         |  - Rarity & Baselines     |
+ Upstream MIT    |  - Correlations           |    Consumes JSON / NDJSON / SARIF
+ Core JSON  ---> |  - Compliance Gap Norm    |    (No reverse calls)
+         |  - ATT&CK Coverage        |
+         |  - HTML / Diff Reports    |
+         +--------------^------------+
+                |
+            Stable JSON Contract
+                |
+ +-------------------------------+-----------------------------+
+ |                         Core (MIT)                          |
+ |  CLI -> Config -> ScannerRegistry -> Scanner Loop -> Report |
+ |                                        |                    |
+ |                                        v                    |
+ |                                   JSONWriter --------------> stdout/file
+ +-------------------------------------------------------------+
+```
+
+## Core Components (MIT)
+* Scanner interface (`Scanner` in `core/Scanner.h`): name(), description(), scan(Report&).
+* Registry (`ScannerRegistry`): Instantiates and runs all default scanners in sequence (single‑threaded for deterministic ordering; structure prepared for future parallelization).
+* Report (`Report`): Thread-safe append-only container of `ScanResult` objects enabling safe future concurrency.
+* Finding model: Plain struct with stable, deterministic field ordering (string severity & key‑sorted metadata map).
+* Config (`Config`): Parsed once at startup; exposes feature flags / numeric thresholds.
+* JSONWriter: Emits canonical ordering + minimal whitespace (canonical mode) and annotates version/provenance. Optional pretty printing kept logically separate so canonical output's hash is stable.
 
 ## Scanner Flow
 1. `ScannerRegistry::register_all_default()` pushes concrete scanner instances into an internal vector.
@@ -78,21 +99,33 @@ CLI -> Config -> ScannerRegistry -> [Scanner Loop]
 - Severity taxonomy coarse; lacks numeric risk scoring (planned for Core; Intelligence layer adds risk_subscores & probability modeling).
 - Compliance remediation hints currently heuristic; deeper mapping pending external knowledge base.
 
-## Intelligence Layer (Proprietary) Overview
-The optional `agent/` Python layer ingests Core JSON, enriches with:
-- Baseline rarity & anomaly scoring
-- Deterministic correlations & sequence analysis
-- Compliance gap normalization & richer remediation mapping
-- HTML reporting & diff generation
-It is licensed separately (see LICENSE) and not required for Core scanning.
+## Intelligence Layer (Proprietary) Overview (≈97% LOC)
+Directory: `agent/` (Python). While the core emphasizes minimal, deterministic collection, the Intelligence Layer supplies the majority of domain logic and code volume.
 
-## Licensing Architecture
-The project adopts a hybrid model:
-- Core scanner: MIT (allows broad reuse & embedding)
-- Intelligence layer: Proprietary evaluation license
+### Functional Stages
+1. Ingestion & Validation: Pydantic models parse core schema (version guards, forward‑compatible allowance for additive fields).
+2. Baseline & Rarity Engine: Historical persistence (SQLite) computing rarity scores & temporal deltas.
+3. Correlation Graph: Deterministic linking of low‑level findings into composite hypotheses (future DAG orchestration expansion aligns with fork prototypes).
+4. Compliance Gap Normalization: Maps raw control signals to unified remediation taxonomy across standards.
+5. Coverage & Tag Aggregation: MITRE technique roll‑ups, control coverage matrices.
+6. Risk Re-Scoring: Combines severity, rarity, age, and correlation confidence into prioritization order.
+7. Reporting Builders: Executive summaries, HTML dashboards, diff reports, machine‑readable enriched JSON.
+8. Redaction / Privacy Filters: Field hashing or removal based on policy profile before export.
+9. Counterfactual & Rule Refinement Utilities: Identify redundant / low-yield rules and propose tuned variants.
+10. Optional Summarization Adapters: Deterministic prompt scaffolding; external model invocation is strictly opt‑in.
 
-Design separation is enforced at directory boundaries; no proprietary symbols are required to compile or run the Core binary.
-- Pretty printer is bespoke; may not preserve ordering if future nested objects added (evaluate rapidjson or nlohmann/json purely for formatting when pretty enabled).
+Design Invariants: deterministic outputs given identical input JSON + baseline state snapshot; no mutation of core artifacts; clear boundary enabling removal of `agent/` without recompilation.
+
+Isolation Guarantees:
+* No modification of core binary or runtime behavior
+* Removal of `agent/` leaves all tests for the core intact
+* Proprietary logic restricted to enrichment & presentation layers
+
+## Licensing Separation
+* Core (this file's described components) – MIT. Upstream canonical: https://github.com/J-mazz/sys-scan
+* Intelligence Layer – Proprietary (evaluation / commercial). Pure consumer of the stable JSON contract.
+
+Design enforcement: build graph for the core binary excludes `agent/`; enrichment imports never leak back into scanner code paths.
 
 ---
 For questions or design proposals, open a GitHub Discussion or Issue tagged `design`.
