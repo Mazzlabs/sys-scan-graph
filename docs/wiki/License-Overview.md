@@ -8,7 +8,7 @@ sys-scan-graph uses a multi-license approach to balance open-source benefits wit
 
 ```
 sys-scan-graph/
-├── Core Scanner (C++20) - Proprietary (MIT-derived)
+├── Core Scanner (C++20) - MIT License
 ├── Intelligence Layer (agent/) - Business Source License 1.1
 ├── Documentation (docs/) - Creative Commons Attribution 4.0
 └── Build Scripts & Tools - MIT
@@ -22,10 +22,10 @@ The core scanner is based on the original open-source [`J-mazz/sys-scan`](https:
 
 ### Current Status
 
-- **License**: Proprietary (with MIT-derived components)
+- **License**: MIT License
 - **Copyright**: Joseph Mazzini
-- **Modifications**: Includes proprietary enhancements and modifications
-- **Redistribution**: Requires commercial agreement
+- **Modifications**: Includes enhancements and modifications while maintaining MIT compatibility
+- **Redistribution**: Permitted under MIT terms
 
 ### Key Components
 
@@ -181,7 +181,7 @@ Special terms available for:
 
 Contributors agree to license their contributions under the same terms as the component they're contributing to:
 
-- **Core Scanner**: Proprietary license
+- **Core Scanner**: MIT License
 - **Intelligence Layer**: BSL 1.1 terms
 - **Documentation**: CC BY 4.0
 - **Tools/Scripts**: MIT
@@ -190,7 +190,7 @@ Contributors agree to license their contributions under the same terms as the co
 
 When submitting pull requests:
 
-1. **Core changes**: Licensed under proprietary terms
+1. **Core changes**: Licensed under MIT
 2. **Intelligence Layer**: Licensed under BSL 1.1
 3. **Documentation**: Licensed under CC BY 4.0
 4. **Tools**: Licensed under MIT
@@ -220,15 +220,17 @@ When submitting pull requests:
 ### Can I use sys-scan-graph for free?
 
 **Yes, for permitted uses:**
-- Personal projects
-- Internal evaluation
-- Academic research
-- Non-production environments
+- Personal projects (Core Scanner: MIT, Intelligence Layer: BSL permitted uses)
+- Internal evaluation (Core Scanner: MIT, Intelligence Layer: BSL permitted uses)
+- Academic research (both components)
+- Non-production environments (both components)
 
-**Commercial license required for:**
-- Production deployment
-- SaaS offerings
-- Commercial redistribution
+**Commercial license required for Intelligence Layer:**
+- Production deployment of Intelligence Layer
+- SaaS/hosted offerings using Intelligence Layer
+- Commercial redistribution of Intelligence Layer
+
+**Core Scanner is always free under MIT for all uses.**
 
 ### When does the BSL license change?
 

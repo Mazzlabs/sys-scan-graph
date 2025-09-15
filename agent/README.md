@@ -68,4 +68,6 @@ All nodes coerce placeholder `None` containers to lists/dicts to avoid `TypeErro
 - Redaction & governance hooks present (see `data_governance.py`) though some are placeholders
 
 ## License
-Follows repository root license.
+Licensed under Business Source License 1.1. See [`LICENSE`](LICENSE) for details.
+
+The Intelligence Layer uses BSL 1.1 to ensure sustainable commercial development while allowing permitted uses for evaluation, research, and contributions.
