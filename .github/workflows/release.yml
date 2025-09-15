@@ -1,0 +1,73 @@
+name: Release (build, test, package, checksums)
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-22.04
+    env:
+      BUILD_TYPE: Release
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup CMake toolchain
+        uses: lukka/get-cmake@v3
+
+      - name: Install deps (apt)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential ninja-build cmake pkg-config
+
+      - name: Configure
+        run: |
+          cmake -B build -S . -G Ninja \
+            -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+            -DSYS_SCAN_REPRO_BUILD=ON \
+            -DSYS_SCAN_SLSA_LEVEL=1
+
+      - name: Build
+        run: cmake --build build -j"$(nproc)"
+
+      - name: Run tests
+        working-directory: build
+        run: ctest --output-on-failure
+
+      - name: Package artifacts
+        run: |
+          mkdir -p dist
+          tar -C build -czf dist/sys-scan-graph-${GITHUB_REF_NAME}-linux-x86_64.tar.gz sys-scan
+          sha256sum dist/* > dist/sha256sums.txt
+
+      # Optional GPG signing if secrets are provided
+      - name: Import GPG key
+        if: secrets.GPG_PRIVATE_KEY && secrets.GPG_PASSPHRASE
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Sign checksums
+        if: env.GPG_FINGERPRINT
+        run: |
+          gpg --batch --yes --armor --detach-sign -u "${GPG_FINGERPRINT}" dist/sha256sums.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          prerelease: false
+          files: |
+            dist/sys-scan-graph-${{ github.ref_name }}-linux-x86_64.tar.gz
+            dist/sha256sums.txt
+            dist/sha256sums.txt.asc
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

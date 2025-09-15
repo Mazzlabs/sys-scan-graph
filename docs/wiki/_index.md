@@ -31,6 +31,7 @@ Welcome to the comprehensive documentation for sys-scan-graph. This index provid
 - **[Performance & Determinism](Performance-Determinism-Provenance.md)** - Performance baselines, canonicalization, reproducible builds, provenance, signing
 - **[Fleet Reporting](Fleet-and-Rarity-Reporting.md)** - Fleet reports and rarity generation
 - **[CLI Guide](CLI-Guide.md)** - Command-line interface for core and agent functionality
+- **[CI and SARIF Integration](CI-and-SARIF-Integration.md)** - Running scans in CI pipelines and SARIF upload
 
 ### Development & Extensibility
 
@@ -54,6 +55,11 @@ If you're new to sys-scan-graph, start here:
 2. **[README](../../README.md)** - Project overview and basic setup
 3. **[CLI Guide](CLI-Guide.md)** - Essential command-line usage
 4. **[Core Scanners](Core-Scanners.md)** - Understanding scanner capabilities
+
+## Release Management
+
+- **[Release Notes Template](../Release-Notes-Template.md)** - Template for creating release notes
+- **[Installation Guide](Installation.md)** - Installation instructions for all platforms
 
 ## Community Resources
 
