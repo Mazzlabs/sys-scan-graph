@@ -1,7 +1,9 @@
 from __future__ import annotations
 import shlex
 from pathlib import Path
-from ..sandbox import run_command
+import sandbox
+
+run_command = sandbox.run_command
 
 def query_package_manager(path: str | Path) -> dict:
     """Attempt to attribute a binary to a package using dpkg -S (Debian-based) as a best-effort.

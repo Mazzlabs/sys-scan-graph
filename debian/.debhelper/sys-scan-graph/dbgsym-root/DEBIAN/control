@@ -1,0 +1,13 @@
+Package: sys-scan-graph-dbgsym
+Package-Type: ddeb
+Source: sys-scan-graph
+Version: 5.0.0-1
+Auto-Built-Package: debug-symbols
+Architecture: amd64
+Maintainer: Joseph Mazzini <joseph@mazzlabs.works>
+Installed-Size: 3602
+Depends: sys-scan-graph (= 5.0.0-1)
+Section: debug
+Priority: optional
+Description: debug symbols for sys-scan-graph
+Build-Ids: 55a35f938981bc9fea5372c97ad47a5eccb064dc

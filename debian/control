@@ -1,16 +1,56 @@
-Source: sys-scan
+Source: sys-scan-graph
 Section: admin
 Priority: optional
 Maintainer: Joseph Mazzini <joseph@mazzlabs.works>
-Build-Depends: debhelper-compat (= 13), cmake, g++ (>= 10), libssl-dev
+Build-Depends: debhelper-compat (= 13),
+               cmake (>= 3.16),
+               g++ (>= 10),
+               libssl-dev,
+               python3-dev,
+               python3-pip,
+               python3-setuptools,
+               python3-wheel,
+               python3-venv
 Standards-Version: 4.7.0
-Homepage: https://github.com/J-mazz/sys-scan
+Homepage: https://github.com/Mazzlabs/sys-scan-graph
+Vcs-Browser: https://github.com/Mazzlabs/sys-scan-graph
+Vcs-Git: https://github.com/Mazzlabs/sys-scan-graph.git
 Rules-Requires-Root: no
 
-Package: sys-scan
+Package: sys-scan-graph
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: Lightweight Linux security & hygiene scanner (process/network/module/IOC)
- A fast C++20 system scanner producing structured JSON findings with noise reduction,
- module integrity heuristics, and IOC aggregation. Includes optional process hashing
- and anomaly-only modes for cleaner CI gating.
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+         python3 (>= 3.8),
+         python3-pip,
+         python3-venv,
+         python3-yaml,
+         python3-requests,
+         python3-click,
+         python3-rich,
+         python3-pydantic,
+         python3-networkx
+Recommends: jq,
+           curl,
+           wget
+Suggests: graphviz,
+          python3-matplotlib
+Description: Advanced Linux Security Scanner with AI Intelligence Layer
+ Sys-Scan-Graph is a comprehensive Linux security and hygiene scanner that combines
+ a high-performance C++20 core scanner with an advanced Python-based Intelligence
+ Layer powered by AI and graph analysis.
+ .
+ The core scanner performs fast host inspection across multiple security domains:
+ processes, network sockets, kernel parameters, kernel modules, world-writable
+ paths, SUID/SGID binaries, IOC heuristics, and MAC (SELinux/AppArmor) status.
+ .
+ The Intelligence Layer provides:
+ * AI-powered threat analysis and risk assessment
+ * Graph-based attack path modeling
+ * Automated rule generation and refinement
+ * Advanced anomaly detection
+ * Integration with multiple LLM providers (OpenAI, Anthropic, Google)
+ * Comprehensive reporting and visualization
+ .
+ Features deterministic JSON output, noise reduction techniques, and CI-friendly
+ operation. Supports both standalone scanning and integrated security workflows.

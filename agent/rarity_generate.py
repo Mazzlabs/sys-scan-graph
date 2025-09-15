@@ -7,7 +7,7 @@ A naive signature (sha256 of sorted entries) is appended for tamper-evidence.
 """
 from pathlib import Path
 import yaml, hashlib, json
-from .baseline import BaselineStore
+import baseline
 from typing import Dict, List
 
 def compute_percentiles(freqs: Dict[str,int]) -> Dict[str,float]:
@@ -31,7 +31,7 @@ def rarity_scores(freqs: Dict[str,int]) -> Dict[str, float]:
     return scores
 
 def generate(db_path: Path = Path('agent_baseline.db'), out: Path = Path('rarity.yaml')) -> Path:
-    store = BaselineStore(db_path)
+    store = baseline.BaselineStore(db_path)
     freqs = store.aggregate_module_frequencies()
     scores = rarity_scores(freqs)
     payload: dict = { 'modules': [{'module': m, 'hosts': freqs[m], 'rarity_score': scores[m]} for m in sorted(freqs.keys())] }

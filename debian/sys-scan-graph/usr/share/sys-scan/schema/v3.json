@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/J-mazz/sys-scan/schema/v3.json",
+  "$comment": "Schema v3 introduces FactPack (post-processing layer) and FindingV3 extensions. Backward compatible ingestion from raw collector v2 -> v3 via migration shim in agent/migration_v3.py. Fields added are additive; original v2 report remains valid for collector-level tooling.",
+  "title": "sys-scan FactPack v3",
+  "type": "object",
+  "required": ["fact_pack_version","source_schema","generated_at","host_id","scan_id","findings","correlations"],
+  "properties": {
+    "fact_pack_version": {"const": "3"},
+    "source_schema": {"enum": ["2"]},
+    "generated_at": {"type": "string"},
+    "host_id": {"type": "string"},
+    "scan_id": {"type": "string"},
+    "finding_count": {"type": "integer","minimum":0},
+    "correlation_count": {"type": "integer","minimum":0},
+    "findings": {
+      "type": "array",
+      "items": {"$ref": "#/definitions/FindingV3"}
+    },
+    "correlations": {
+      "type": "array",
+      "items": {"$ref": "#/definitions/CorrelationV3"}
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "FindingV3": {
+      "type": "object",
+      "required": ["id","title","severity","risk_score","category","severity_source","baseline_status"],
+      "properties": {
+        "id": {"type": "string"},
+        "title": {"type": "string"},
+        "severity": {"enum": ["info","low","medium","high","critical","error"]},
+        "risk_score": {"type": "integer","minimum":0,"maximum":100},
+        "description": {"type": "string"},
+        "category": {"enum": [
+          "process","network_socket","kernel_param","kernel_module","filesystem","privilege_escalation_surface","ioc","mac","integrity","rule_enrichment","other"
+        ]},
+        "tags": {"type": "array","items": {"type": "string"}},
+        "risk_subscores": {"type": "object","additionalProperties": {"type": "number"}},
+        "correlation_refs": {"type": "array","items": {"type": "string"}},
+        "baseline_status": {"enum": ["new","existing","unknown"]},
+        "severity_source": {"enum": ["raw","bumped","rule_engine"]},
+        "allowlist_reason": {"type": ["string","null"]},
+        "metadata": {"type": "object","additionalProperties": true}
+      },
+      "additionalProperties": true
+    },
+    "CorrelationV3": {
+      "type": "object",
+      "required": ["id","title","related_finding_ids"],
+      "properties": {
+        "id": {"type": "string"},
+        "title": {"type": "string"},
+        "rationale": {"type": "string"},
+        "related_finding_ids": {"type": "array","items": {"type": "string"}},
+        "risk_score_delta": {"type": "integer"},
+        "tags": {"type": "array","items": {"type": "string"}},
+        "severity": {"enum": ["info","low","medium","high","critical","error",null]},
+        "exposure_tags": {"type": "array","items": {"type": "string"}}
+      },
+      "additionalProperties": true
+    }
+  }
+}

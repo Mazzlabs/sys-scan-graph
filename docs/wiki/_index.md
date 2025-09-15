@@ -50,9 +50,10 @@ Welcome to the comprehensive documentation for sys-scan-graph. This index provid
 
 If you're new to sys-scan-graph, start here:
 
-1. **[README](../../README.md)** - Project overview and basic setup
-2. **[CLI Guide](CLI-Guide.md)** - Essential command-line usage
-3. **[Core Scanners](Core-Scanners.md)** - Understanding scanner capabilities
+1. **[Installation Guide](Installation.md)** - Complete installation instructions for all platforms
+2. **[README](../../README.md)** - Project overview and basic setup
+3. **[CLI Guide](CLI-Guide.md)** - Essential command-line usage
+4. **[Core Scanners](Core-Scanners.md)** - Understanding scanner capabilities
 
 ## Community Resources
 

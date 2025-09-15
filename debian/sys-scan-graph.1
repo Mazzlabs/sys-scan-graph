@@ -1,0 +1,136 @@
+.TH SYS-SCAN-GRAPH 1 "August 2025" "sys-scan-graph 5.0.0" "User Commands"
+.SH NAME
+.B sys-scan-graph
+\- advanced Linux security & hygiene scanner with AI Intelligence Layer.
+.SH SYNOPSIS
+.B sys-scan-graph
+[options] [command]
+.SH DESCRIPTION
+.B sys-scan-graph
+is a comprehensive Linux security and hygiene scanner that combines a high-performance
+C++20 core scanner with an advanced Python-based Intelligence Layer powered by AI
+and graph analysis.
+.PP
+The core scanner performs fast host inspection across multiple security domains:
+processes, network sockets, kernel parameters, kernel modules, world-writable paths,
+SUID/SGID binaries, IOC heuristics, and MAC (SELinux/AppArmor) status.
+.PP
+The Intelligence Layer provides AI-powered analysis including:
+.IP \(bu 2
+Threat analysis and risk assessment using LLMs
+.IP \(bu 2
+Graph-based attack path modeling
+.IP \(bu 2
+Automated rule generation and refinement
+.IP \(bu 2
+Advanced anomaly detection
+.IP \(bu 2
+Comprehensive reporting and visualization
+.IP \(bu 2
+Integration with OpenAI, Anthropic, and Google AI
+.PP
+Features deterministic JSON output, noise reduction techniques, and CI-friendly
+operation. Supports both standalone scanning and integrated security workflows.
+.SH OPTIONS
+.TP
+.BR --enable " name[,name...]"
+Only run the specified scanners (whitelist). Names match internal scanner identifiers
+(e.g. processes, network, modules, suid, ioc, mac, world_writable, kernel_params).
+.TP
+.BR --disable " name[,name...]"
+Disable the specified scanners (blacklist variant).
+.TP
+.BR --output " FILE"
+Write JSON output to FILE instead of stdout.
+.TP
+.BR --min-severity " SEV"
+Filter out findings below SEV (info|low|medium|high|critical).
+.TP
+.BR --fail-on " SEV"
+Exit non-zero if any finding has severity >= SEV after filtering.
+.TP
+.BR --fail-on-count " N"
+Exit non-zero if total finding count (post-filter) >= N.
+.TP
+.BR --pretty
+Pretty-print JSON (basic formatter). Mutually exclusive preference with --compact
+(if both supplied, last wins; default is minified deterministic JSON).
+.TP
+.BR --compact
+Force minimal JSON (overrides pretty).
+.TP
+.BR --all-processes
+Include kernel / thread processes lacking cmdline (otherwise skipped as noise).
+.TP
+.BR --process-hash
+Include SHA256 hash (first 1MB) of each process executable when OpenSSL is available.
+.TP
+.BR --process-inventory
+Emit normal process inventory (without requiring anomalies) for broader visibility.
+.TP
+.BR --max-processes " N"
+Cap number of process findings after filtering (performance / size guard).
+.TP
+.BR --max-sockets " N"
+Cap number of network socket findings (performance / size guard).
+.TP
+.BR --network-debug
+Include raw unparsed /proc/net lines to aid parser troubleshooting.
+.TP
+.BR --network-listen-only
+Limit network findings to listening TCP plus all bound UDP sockets.
+.TP
+.BR --network-proto " tcp|udp"
+Restrict network scanner to a single protocol.
+.TP
+.BR --network-states " list"
+Comma-separated TCP states (e.g. LISTEN,ESTABLISHED) for filtering.
+.TP
+.BR --modules-summary
+Collapse full kernel module enumeration into a single summary finding.
+.TP
+.BR --modules-anomalies-only
+Emit only unsigned / out-of-tree module anomalies (suppresses summary/detail).
+.TP
+.BR --world-writable-dirs " dirs"
+Additional comma-separated directory roots to scan for world-writable files.
+.TP
+.BR --world-writable-exclude " pats"
+Comma-separated substrings; matching paths are ignored in world-writable scan.
+.TP
+.BR --ioc-allow " list"
+Comma-separated substrings considered benign for environment IOC heuristics
+(downgrades severity rather than suppressing entirely).
+.TP
+.BR --ioc-allow-file " FILE"
+Newline-delimited allowlist file (supports # comments) extending --ioc-allow.
+.TP
+.BR --suid-expected " list"
+Comma-separated additional expected SUID/SGID paths (exact or suffix). Expected
+binaries have their severity downgraded to reduce noise.
+.TP
+.BR --suid-expected-file " FILE"
+Newline-delimited expected SUID/SGID paths (supports # comments).
+.TP
+.BR --help
+Show concise usage help and exit.
+.SH EXIT STATUS
+.TP
+0 Normal successful execution (and fail-on thresholds not triggered).
+.TP
+1 A fail condition was met (severity threshold or count) OR internal fatal error.
+.TP
+2 Command line argument error (missing/unknown flag or missing value).
+.SH JSON STRUCTURE (ABRIDGED)
+The top-level object contains metadata (tool_version, json_schema_version), a summary
+(counts, durations), and an array of per-scanner results with findings. Each finding has:
+ id, title, severity, description, metadata (stable key ordering).
+.SH SECURITY NOTES
+Module scanner invokes system xz/gzip for compressed .ko modules (root-owned source
+paths mitigate injection risk). No outbound network connections are made.
+.SH HOMEPAGE
+https://github.com/J-mazz/sys-scan
+.SH BUGS
+Report issues at: https://github.com/J-mazz/sys-scan/issues
+.SH AUTHOR
+Joseph Mazzini <joseph@mazzlabs.works>

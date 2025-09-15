@@ -7,7 +7,10 @@ Outputs:
   - cluster summaries with risk aggregates
 """
 from typing import Dict, List, Set, Tuple
-from .models import AgentState, Finding, Correlation
+import models
+AgentState = models.AgentState
+Finding = models.Finding
+Correlation = models.Correlation
 
 def build_bipartite(state: AgentState) -> Tuple[Dict[str, Set[str]], Dict[str, Set[str]]]:
     """Return adjacency maps:

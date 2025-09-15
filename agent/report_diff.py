@@ -1,12 +1,12 @@
 from __future__ import annotations
-from .models import EnrichedOutput
+import models
 from pathlib import Path
 import json, math
 
 IGNORED_FIELDS = {'raw_reference','followups','integrity'}
 
 
-def _finding_index(out: EnrichedOutput):
+def _finding_index(out: models.EnrichedOutput):
     idx = {}
     for f in out.enriched_findings or []:
         idx[f.id] = f
@@ -20,7 +20,7 @@ def risk_bucket(r: float|None):
     if r >= 20: return 'low'
     return 'info'
 
-def build_diff(prev: EnrichedOutput, curr: EnrichedOutput) -> str:
+def build_diff(prev: models.EnrichedOutput, curr: models.EnrichedOutput) -> str:
     prev_idx = _finding_index(prev)
     curr_idx = _finding_index(curr)
     added, removed, changed = [], [], []
@@ -55,7 +55,7 @@ def build_diff(prev: EnrichedOutput, curr: EnrichedOutput) -> str:
     lines.append(f"Prev avg: {prev_avg:.3f} Curr avg: {curr_avg:.3f} Δ={curr_avg - prev_avg:+.3f}")
     return '\n'.join(lines) + '\n'
 
-def write_diff(prev: EnrichedOutput, curr: EnrichedOutput, path: Path):
+def write_diff(prev: models.EnrichedOutput, curr: models.EnrichedOutput, path: Path):
     text = build_diff(prev, curr)
     path.write_text(text, encoding='utf-8')
     return path

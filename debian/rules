@@ -13,6 +13,20 @@ override_dh_auto_configure:
 	  -DBUILD_TESTS=OFF \
 	  -DENABLE_OPENSSL=ON
 
+override_dh_auto_build:
+	dh_auto_build
+	# Build Python package if setup.py exists
+	if [ -f agent/setup.py ]; then \
+		cd agent && python3 setup.py build; \
+	fi
+
+override_dh_auto_install:
+	dh_auto_install
+	# Install Python package if setup.py exists
+	if [ -f agent/setup.py ]; then \
+		cd agent && python3 setup.py install --root=../debian/sys-scan-graph --install-layout=deb; \
+	fi
+
 override_dh_auto_test:
 	# Tests disabled for now in packaging build (can enable later)
 

@@ -2,9 +2,14 @@ from __future__ import annotations
 import json, copy
 from pathlib import Path
 from typing import Dict, List, Any
-from .models import EnrichedOutput, Finding
-from .risk import compute_risk, load_persistent_weights
-from .calibration import apply_probability
+import models
+import risk
+import calibration
+EnrichedOutput = models.EnrichedOutput
+Finding = models.Finding
+compute_risk = risk.compute_risk
+load_persistent_weights = risk.load_persistent_weights
+apply_probability = calibration.apply_probability
 
 
 def apply_ip_forward_disabled(f: Finding) -> Finding:

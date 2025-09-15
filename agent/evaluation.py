@@ -2,8 +2,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import List, Dict
-from .pipeline import run_pipeline
-from .models import EnrichedOutput
+import pipeline
+import models
+run_pipeline = pipeline.run_pipeline
+EnrichedOutput = models.EnrichedOutput
 
 INJECTED_INDICATORS = {
     "compromised_dev_host": [

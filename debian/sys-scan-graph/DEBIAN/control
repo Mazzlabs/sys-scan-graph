@@ -1,0 +1,30 @@
+Package: sys-scan-graph
+Version: 5.0.0-1
+Architecture: amd64
+Maintainer: Joseph Mazzini <joseph@mazzlabs.works>
+Installed-Size: 2005
+Depends: libc6 (>= 2.38), libcap2 (>= 1:2.10), libgcc-s1 (>= 3.3.1), liblzma5 (>= 5.1.1alpha+20120614), libseccomp2 (>= 0.0.0~20120605), libstdc++6 (>= 13.1), zlib1g (>= 1:1.1.4), python3 (>= 3.8), python3-pip, python3-venv, python3-yaml, python3-requests, python3-click, python3-rich, python3-pydantic, python3-networkx
+Recommends: jq, curl, wget
+Suggests: graphviz, python3-matplotlib
+Section: admin
+Priority: optional
+Homepage: https://github.com/Mazzlabs/sys-scan-graph
+Description: Advanced Linux Security Scanner with AI Intelligence Layer
+ Sys-Scan-Graph is a comprehensive Linux security and hygiene scanner that combines
+ a high-performance C++20 core scanner with an advanced Python-based Intelligence
+ Layer powered by AI and graph analysis.
+ .
+ The core scanner performs fast host inspection across multiple security domains:
+ processes, network sockets, kernel parameters, kernel modules, world-writable
+ paths, SUID/SGID binaries, IOC heuristics, and MAC (SELinux/AppArmor) status.
+ .
+ The Intelligence Layer provides:
+ * AI-powered threat analysis and risk assessment
+ * Graph-based attack path modeling
+ * Automated rule generation and refinement
+ * Advanced anomaly detection
+ * Integration with multiple LLM providers (OpenAI, Anthropic, Google)
+ * Comprehensive reporting and visualization
+ .
+ Features deterministic JSON output, noise reduction techniques, and CI-friendly
+ operation. Supports both standalone scanning and integrated security workflows.

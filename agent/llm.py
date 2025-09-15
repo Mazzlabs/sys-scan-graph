@@ -1,9 +1,7 @@
 from __future__ import annotations
-from .models import Reductions, Correlation, Summaries, ActionItem
-from .redaction import redact_reductions
-from .llm_models import (
-    PromptAOutput, PromptBOutput, PromptCOutput, ConsistencyIssue, GuardrailError, TriageFinding
-)
+import models
+import redaction
+import llm_models
 from typing import List
 import textwrap, json
 
@@ -22,34 +20,34 @@ class LLMClient:
             self.avg_prompt_tokens = self.alpha*pt + (1-self.alpha)*self.avg_prompt_tokens
             self.avg_completion_tokens = self.alpha*ct + (1-self.alpha)*self.avg_completion_tokens
         return self.avg_prompt_tokens, self.avg_completion_tokens
-    def _prompt_a_consistency(self, reductions: Reductions, correlations: List[Correlation]) -> PromptAOutput:
+    def _prompt_a_consistency(self, reductions: models.Reductions, correlations: List[models.Correlation]) -> llm_models.PromptAOutput:
         ms = reductions.module_summary or {}
-        issues: List[ConsistencyIssue] = []
+        issues: List[llm_models.ConsistencyIssue] = []
         mc = ms.get('module_count')
         distinct = ms.get('distinct_modules') or mc
         if mc and distinct and mc < distinct:
-            issues.append(ConsistencyIssue(issue="module_count_lt_distinct", details={"module_count": mc, "distinct": distinct}))
+            issues.append(llm_models.ConsistencyIssue(issue="module_count_lt_distinct", details={"module_count": mc, "distinct": distinct}))
         for c in correlations:
             if not c.related_finding_ids:
-                issues.append(ConsistencyIssue(issue="empty_correlation", details={"id": c.id}))
-        return PromptAOutput(findings=issues)
+                issues.append(llm_models.ConsistencyIssue(issue="empty_correlation", details={"id": c.id}))
+        return llm_models.PromptAOutput(findings=issues)
 
-    def _prompt_b_triage(self, reductions: Reductions, correlations: List[Correlation]) -> PromptBOutput:
+    def _prompt_b_triage(self, reductions: models.Reductions, correlations: List[models.Correlation]) -> llm_models.PromptBOutput:
         top = []
         for f in reductions.top_findings[:5]:
             try:
-                top.append(TriageFinding(**f))
+                top.append(llm_models.TriageFinding(**f))
             except Exception:
                 continue
-        return PromptBOutput(top_findings=top, correlation_count=len(correlations))
+        return llm_models.PromptBOutput(top_findings=top, correlation_count=len(correlations))
 
-    def _prompt_c_actions(self, actions: List[ActionItem]) -> PromptCOutput:
+    def _prompt_c_actions(self, actions: List[models.ActionItem]) -> llm_models.PromptCOutput:
         lines = []
         for a in actions:
             refs = f" (corr {', '.join(a.correlation_refs)})" if a.correlation_refs else ""
             lines.append(f"{a.priority}. {a.action}{refs}")
         narrative = "\n".join(lines)
-        return PromptCOutput(action_lines=lines, narrative=narrative)
+        return llm_models.PromptCOutput(action_lines=lines, narrative=narrative)
 
     def _validate_or_retry(self, builder_fn, max_retries=1):
         # Temperature fixed at 0, tokens bounded externally (placeholder comment)
@@ -61,10 +59,10 @@ class LLMClient:
             except Exception as e:
                 last_err = e
                 attempt += 1
-        raise GuardrailError(f"Validation failed after {max_retries+1} attempts: {last_err}")
+        raise llm_models.GuardrailError(f"Validation failed after {max_retries+1} attempts: {last_err}")
 
-    def summarize(self, reductions: Reductions, correlations: List[Correlation], actions: List[ActionItem],
-                  skip: bool = False, previous: Summaries | None = None, skip_reason: str | None = None) -> Summaries:
+    def summarize(self, reductions: models.Reductions, correlations: List[models.Correlation], actions: List[models.ActionItem],
+                  skip: bool = False, previous: models.Summaries | None = None, skip_reason: str | None = None) -> models.Summaries:
         # Prompt B builds on reduced facts
         import time
         start = time.time()
@@ -85,7 +83,7 @@ class LLMClient:
             return reused
         # Redact sensitive fields prior to prompt construction
         try:
-            red_red = redact_reductions(reductions)
+            red_red = redaction.redact_reductions(reductions)
         except Exception:
             red_red = reductions
         lines = []
@@ -117,7 +115,7 @@ class LLMClient:
             'avg_completion_tokens': round(avg_ct,2),
             'budget_alert': drift_flag
         }
-        return Summaries(
+        return models.Summaries(
             executive_summary=executive,
             analyst=analyst,
             consistency_findings=[i.model_dump() for i in consistency_obj.findings],

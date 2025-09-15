@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/J-mazz/sys-scan/schema/v2.json",
+  "title": "sys-scan report",
+  "type": "object",
+  "required": ["meta","summary","results","collection_warnings","scanner_errors","summary_extension"],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["hostname","tool_version","json_schema_version"],
+      "properties": {
+        "hostname": {"type":"string"},
+        "tool_version": {"type":"string"},
+        "json_schema_version": {"const":"2"},
+        "$schema": {"type":"string"}
+      },
+      "additionalProperties": true
+    },
+    "summary": {"type":"object"},
+    "results": {
+      "type": "array",
+      "items": {"type":"object","required":["scanner","finding_count","findings"],
+        "properties": {
+          "scanner": {"type":"string"},
+          "finding_count": {"type":"integer"},
+          "findings": {"type":"array","items": {"type":"object","required":["id","title","severity","risk_score","metadata"],
+            "properties": {
+              "id": {"type":"string"},
+              "title": {"type":"string"},
+              "severity": {"enum":["info","low","medium","high","critical","error"]},
+              "risk_score": {"type":"integer","minimum":0,"maximum":100},
+              "metadata": {"type":"object"}
+            },"additionalProperties": true}}
+        },"additionalProperties": true}
+    },
+    "collection_warnings": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {"type":"object","required":["scanner","code"],"properties":{"scanner":{"type":"string"},"code":{"type":"string"},"detail":{"type":"string"}},"additionalProperties":false},
+          {"type":"object","required":["scanner","message"],"properties":{"scanner":{"type":"string"},"message":{"type":"string"}},"additionalProperties":false}
+        ]
+      }
+    },
+    "scanner_errors": {"type":"array","items":{"type":"object","required":["scanner","message"],"properties":{"scanner":{"type":"string"},"message":{"type":"string"}},"additionalProperties":false}},
+    "summary_extension": {"type":"object","required":["total_risk_score"],"properties":{"total_risk_score":{"type":"integer"}},"additionalProperties":true}
+  },
+  "additionalProperties": false
+}

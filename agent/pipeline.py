@@ -1,7 +1,7 @@
 """
 Pipeline module - imports functions from legacy pipeline for backward compatibility.
 """
-from .legacy.pipeline import (
+from legacy.pipeline import (
     load_report,
     augment,
     correlate,
@@ -14,4 +14,5 @@ from .legacy.pipeline import (
     build_output,
     run_pipeline
 )
-from .models import AgentState
+import models
+AgentState = models.AgentState

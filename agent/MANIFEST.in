@@ -1,0 +1,59 @@
+include sys_scan_graph_agent/cli.py
+include sys_scan_graph_agent/__init__.py
+include rules.py
+include baseline.py
+include config.py
+include models.py
+include audit.py
+include calibration.py
+include canonicalize.py
+include counterfactual.py
+include data_governance.py
+include db_pool.py
+include endpoint_classification.py
+include evaluation.py
+include graph.py
+include graph_analysis.py
+include graph_nodes_scaffold.py
+include graph_state.py
+include hf_loader.py
+include integrity.py
+include knowledge.py
+include llm.py
+include llm_cache.py
+include llm_models.py
+include llm_provider.py
+include llm_provider_enhanced.py
+include metrics.py
+include metrics_exporter.py
+include metrics_node.py
+include migration_v3.py
+include performance_baseline.py
+include pipeline.py
+include rarity_generate.py
+include redaction.py
+include reduction.py
+include report_diff.py
+include report_html.py
+include retriever.py
+include risk.py
+include rule_gap_miner.py
+include rule_redundancy.py
+include rule_refiner.py
+include rule_suggest.py
+include sandbox.py
+include tool_wrapper.py
+include tools.py
+include tools_enhanced.py
+include util_hash.py
+include util_normalization.py
+include README.md
+include requirements.txt
+recursive-include executors *.py
+recursive-include fixtures *.py
+recursive-include knowledge *.py
+recursive-include legacy *.py
+recursive-include ml *.py
+recursive-include prompt_templates *.py
+recursive-include providers *.py
+recursive-include tests *.py

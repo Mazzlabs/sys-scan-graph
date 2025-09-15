@@ -6,7 +6,10 @@ Baseline status requires baseline deltas mapping (hash->status). If absent, mark
 """
 from datetime import datetime, timezone
 from typing import Dict, Any, List
-from .models import Report, Finding, Correlation
+import models
+Report = models.Report
+Finding = models.Finding
+Correlation = models.Correlation
 
 CATEGORY_FALLBACK = "other"
 

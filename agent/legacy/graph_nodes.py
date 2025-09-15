@@ -10,33 +10,61 @@ captures the error as a warning entry and proceeds without aborting the graph.
 from typing import Any, List, Dict
 import tempfile, json
 
-from ..graph import GraphState
-from .data_governance import get_data_governor
-from .models import Finding, ScannerResult, Report, Meta, Summary, SummaryExtension, AgentState
-from .knowledge import apply_external_knowledge
-from .pipeline import augment as _augment
-from .reduction import reduce_all
-from .llm_provider import get_llm_provider
-from .rules import Correlator, DEFAULT_RULES
-from ..rule_gap_miner import mine_gap_candidates
-from ..graph_state import normalize_graph_state
+import graph
+import data_governance
+import models
+import knowledge
+import pipeline
+import reduction
+import llm_provider
+import rules
+import rule_gap_miner
+import graph_state
+GraphState = graph.GraphState
+get_data_governor = data_governance.get_data_governor
+Finding = models.Finding
+ScannerResult = models.ScannerResult
+Report = models.Report
+Meta = models.Meta
+Summary = models.Summary
+SummaryExtension = models.SummaryExtension
+AgentState = models.AgentState
+apply_external_knowledge = knowledge.apply_external_knowledge
+_augment = pipeline.augment
+reduce_all = reduction.reduce_all
+get_llm_provider = llm_provider.get_llm_provider
+Correlator = rules.Correlator
+DEFAULT_RULES = rules.DEFAULT_RULES
+mine_gap_candidates = rule_gap_miner.mine_gap_candidates
+normalize_graph_state = graph_state.normalize_graph_state
 try:  # Optional: message classes for tool planning/integration
     from langchain_core.messages import AIMessage, ToolMessage  # type: ignore
 except Exception:  # pragma: no cover
     AIMessage = ToolMessage = None  # type: ignore
 
-# Import batch processing helpers from scaffold
-try:
-    from .graph_nodes_scaffold import (
-        _batch_extract_finding_fields,
-        _batch_filter_findings_by_severity,
-        _batch_check_baseline_status,
-    )
-except ImportError:  # pragma: no cover
+# Import batch processing helpers from scaffold (avoid circular import)
+# These will be imported locally in functions that need them
     # Fallback if scaffold not available
-    def _batch_extract_finding_fields(findings): return {'severities': []}
-    def _batch_filter_findings_by_severity(fields, severity_levels): return []
-    def _batch_check_baseline_status(findings): return []
+    def _batch_extract_finding_fields(findings):
+        try:
+            import graph_nodes_scaffold
+            return graph_nodes_scaffold._batch_extract_finding_fields(findings)
+        except (ImportError, AttributeError):
+            return {'severities': []}
+
+    def _batch_filter_findings_by_severity(fields, severity_levels):
+        try:
+            import graph_nodes_scaffold
+            return graph_nodes_scaffold._batch_filter_findings_by_severity(fields, severity_levels)
+        except (ImportError, AttributeError):
+            return []
+
+    def _batch_check_baseline_status(findings):
+        try:
+            import graph_nodes_scaffold
+            return graph_nodes_scaffold._batch_check_baseline_status(findings)
+        except (ImportError, AttributeError):
+            return []
 
 
 def _append_warning(state: GraphState, module: str, stage: str, error: str, hint: str | None = None):
@@ -72,7 +100,7 @@ def enrich_findings(state: GraphState) -> GraphState:
     Converts raw_findings into enriched_findings using existing augment + knowledge code.
     """
     # Normalize state to ensure all mandatory keys exist
-    state = normalize_graph_state(state)
+    state = normalize_graph_state(dict(state))  # type: ignore
 
     try:
         findings = _findings_from_graph(state)
@@ -97,7 +125,7 @@ def enrich_findings(state: GraphState) -> GraphState:
 
 def correlate_findings(state: GraphState) -> GraphState:
     # Normalize state to ensure all mandatory keys exist
-    state = normalize_graph_state(state)  # type: ignore
+    state = normalize_graph_state(dict(state))  # type: ignore
 
     try:
         findings: List[Finding] = []
@@ -127,7 +155,7 @@ def correlate_findings(state: GraphState) -> GraphState:
 
 def summarize_host_state(state: GraphState) -> GraphState:
     # Normalize state to ensure all mandatory keys exist
-    state = normalize_graph_state(state)  # type: ignore
+    state = normalize_graph_state(dict(state))  # type: ignore
 
     try:
         # Iteration guard: default max iterations 3
@@ -145,7 +173,7 @@ def summarize_host_state(state: GraphState) -> GraphState:
             except Exception:
                 continue
         reductions = reduce_all(findings)
-        from .models import Correlation as _C
+        from models import Correlation as _C
         corr_objs = []
         for c in state.get('correlations', []) or []:
             try:
@@ -153,7 +181,7 @@ def summarize_host_state(state: GraphState) -> GraphState:
             except Exception:
                 continue
         baseline_context = state.get('baseline_results') or {}
-        summaries = provider.summarize(reductions, corr_objs, actions=[], baseline_context=baseline_context)
+        summaries, _ = provider.summarize(reductions, corr_objs, actions=[], baseline_context=baseline_context)
         state['summary'] = summaries.model_dump()
         state['iteration_count'] = iters + 1
     except Exception as e:  # pragma: no cover
@@ -167,7 +195,7 @@ def suggest_rules(state: GraphState) -> GraphState:
     Uses existing gap miner; writes a temp file to leverage current API.
     """
     # Normalize state to ensure all mandatory keys exist
-    state = normalize_graph_state(state)  # type: ignore
+    state = normalize_graph_state(dict(state))  # type: ignore
 
     try:
         findings = state.get('enriched_findings') or []
@@ -197,7 +225,7 @@ def should_suggest_rules(state: GraphState) -> str:  # Router for conditional ed
     proceed to the expensive suggestion phase; otherwise end the graph.
     """
     # Normalize state to ensure all mandatory keys exist
-    state = normalize_graph_state(state)  # type: ignore
+    state = normalize_graph_state(dict(state))  # type: ignore
 
     try:
         enriched = state.get('enriched_findings') or []
@@ -238,7 +266,7 @@ def choose_post_summarize(state: GraphState) -> str:  # Router after summarize
     2. Else defer to should_suggest_rules routing (suggest_rules or END)
     """
     # Normalize state to ensure all mandatory keys exist
-    state = normalize_graph_state(state)  # type: ignore
+    state = normalize_graph_state(dict(state))  # type: ignore
 
     if not state.get('baseline_cycle_done'):
         enriched = state.get('enriched_findings') or []
@@ -262,7 +290,7 @@ def plan_baseline_queries(state: GraphState) -> GraphState:
     finding lacking baseline_status. ToolNode will execute these in batch.
     """
     # Normalize state to ensure all mandatory keys exist
-    state = normalize_graph_state(state)  # type: ignore
+    state = normalize_graph_state(dict(state))  # type: ignore
 
     if AIMessage is None:  # Dependency missing; skip planning
         return state
@@ -314,7 +342,7 @@ def integrate_baseline_results(state: GraphState) -> GraphState:
     Marks baseline_cycle_done to prevent repeated looping.
     """
     # Normalize state to ensure all mandatory keys exist
-    state = normalize_graph_state(state)  # type: ignore
+    state = normalize_graph_state(dict(state))  # type: ignore
 
     if ToolMessage is None:  # Dependency missing
         state['baseline_cycle_done'] = True

@@ -8,6 +8,12 @@ from typing import Any, Optional, Dict, List
 import logging
 import os
 
+import models
+Reductions = models.Reductions
+Summaries = models.Summaries
+Correlation = models.Correlation
+ActionItem = models.ActionItem
+
 logger = logging.getLogger(__name__)
 
 class DataGovernor:
@@ -20,7 +26,14 @@ class DataGovernor:
     def redact_for_llm(self, data: Any) -> Any:
         """Redact sensitive data before sending to LLM."""
         # CRITICAL: Handle Pydantic models FIRST - return unchanged to preserve type
-        from .models import Reductions, Summaries, Correlation, ActionItem
+        try:
+            from .models import Reductions, Summaries, Correlation, ActionItem
+        except ImportError:
+            import models
+            Reductions = models.Reductions
+            Summaries = models.Summaries
+            Correlation = models.Correlation
+            ActionItem = models.ActionItem
         if isinstance(data, (Reductions, Summaries, Correlation, ActionItem)):
             return data
         

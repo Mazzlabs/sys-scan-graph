@@ -10,7 +10,9 @@ Roles (ordered by specificity):
 Signals consumed from existing findings metadata & tags so we avoid extra system calls.
 """
 from typing import List, Tuple
-from .models import Report, Finding
+import models
+Report = models.Report
+Finding = models.Finding
 
 ROLE_ORDER = [
     "bastion",

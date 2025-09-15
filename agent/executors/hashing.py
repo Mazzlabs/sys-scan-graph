@@ -1,7 +1,9 @@
 from __future__ import annotations
 from pathlib import Path
 import hashlib
-from ..sandbox import SANDBOX
+import sandbox
+
+SANDBOX = sandbox.SANDBOX
 
 def hash_binary(path: str | Path) -> dict:
     p = Path(path)

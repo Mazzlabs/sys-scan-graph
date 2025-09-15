@@ -76,18 +76,18 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> Config:
 # -------- Manifest Helpers ---------
 
 def compute_rule_pack_sha(rule_dirs: List[str]) -> str:
-    from .rules import load_rules_dir
+    import rules
     all_rules = []
     for rd in rule_dirs:
-        all_rules.extend(load_rules_dir(rd))
+        all_rules.extend(rules.load_rules_dir(rd))
     # stable sorted JSON
     payload = json.dumps(sorted(all_rules, key=lambda r: r.get('id','')), sort_keys=True).encode()
     return hashlib.sha256(payload).hexdigest()
 
 def embedding_model_hash() -> str:
     try:
-        from .baseline import process_feature_vector
-        src = inspect.getsource(process_feature_vector)
+        import baseline
+        src = inspect.getsource(baseline.process_feature_vector)
     except Exception:
         src = 'baseline:process_feature_vector'
     return hashlib.sha256(src.encode()).hexdigest()

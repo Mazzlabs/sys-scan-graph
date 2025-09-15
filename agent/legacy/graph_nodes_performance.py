@@ -26,16 +26,38 @@ from concurrent.futures import ThreadPoolExecutor
 # Use standard sqlite3 for now, can upgrade to aiosqlite later
 import sqlite3
 
-from .graph import GraphState
-from .data_governance import get_data_governor
-from .models import Finding, ScannerResult, Report, Meta, Summary, SummaryExtension, AgentState, Reductions
-from .knowledge import apply_external_knowledge
-from .pipeline import augment as _augment
-from .reduction import reduce_all
-from .llm_provider import get_llm_provider
-from .rules import Correlator, DEFAULT_RULES
-from ..rule_gap_miner import mine_gap_candidates
-from ..graph_state import normalize_graph_state
+import graph
+import data_governance
+import models
+import knowledge
+import pipeline
+import reduction
+import llm_provider
+import rules
+import rule_gap_miner
+import graph_state
+import baseline
+
+# Re-export for backward compatibility
+GraphState = graph.GraphState
+get_data_governor = data_governance.get_data_governor
+Finding = models.Finding
+ScannerResult = models.ScannerResult
+Report = models.Report
+Meta = models.Meta
+Summary = models.Summary
+SummaryExtension = models.SummaryExtension
+AgentState = models.AgentState
+Reductions = models.Reductions
+apply_external_knowledge = knowledge.apply_external_knowledge
+_augment = pipeline.augment
+reduce_all = reduction.reduce_all
+get_llm_provider = llm_provider.get_llm_provider
+Correlator = rules.Correlator
+DEFAULT_RULES = rules.DEFAULT_RULES
+mine_gap_candidates = rule_gap_miner.mine_gap_candidates
+normalize_graph_state = graph_state.normalize_graph_state
+hashlib_sha = baseline.hashlib_sha
 
 logger = logging.getLogger(__name__)
 
@@ -542,7 +564,10 @@ async def summarize_host_state_streaming(state: GraphState) -> GraphState:
             try:
                 # Process chunk with memory monitoring
                 chunk_reductions = reduce_all(chunk)
-                reductions.extend(chunk_reductions)
+                # Convert list to Reductions object if needed
+                if isinstance(chunk_reductions, list):
+                    chunk_reductions = Reductions(top_findings=chunk_reductions)
+                reductions.extend(chunk_reductions.top_findings if hasattr(chunk_reductions, 'top_findings') else [chunk_reductions])
 
                 # Update progress
                 progress_tracker['processed_chunks'] = chunk_idx + 1
@@ -605,7 +630,9 @@ async def summarize_host_state_streaming(state: GraphState) -> GraphState:
 
         # Generate summary with fallback handling
         try:
-            summaries = provider.summarize(reductions, corr_objs, actions=[], baseline_context=baseline_context)
+            # Create Reductions object from accumulated findings
+            final_reductions = Reductions(top_findings=reductions)
+            summaries, _ = provider.summarize(final_reductions, corr_objs, actions=[], baseline_context=baseline_context)
             state['summary'] = summaries.model_dump()
         except Exception as e:
             logger.error(f"Summary generation failed: {e}")

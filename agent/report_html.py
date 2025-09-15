@@ -1,6 +1,6 @@
 from __future__ import annotations
 from pathlib import Path
-from .models import EnrichedOutput
+import models
 import html, json, datetime
 
 CSS = """
@@ -26,7 +26,7 @@ small { color:#334155; }
 footer { margin-top:2rem; font-size:12px; color:#64748b; }
 """
 
-def render(output: EnrichedOutput) -> str:
+def render(output: models.EnrichedOutput) -> str:
     now = datetime.datetime.utcnow().isoformat() + 'Z'
     findings = output.enriched_findings or []
     corrs = output.correlations or []
@@ -86,7 +86,7 @@ def render(output: EnrichedOutput) -> str:
 <footer>Static HTML artifact. No external JS. sys-scan.</footer>
 </body></html>"""
 
-def write_html(output: EnrichedOutput, path: Path):
+def write_html(output: models.EnrichedOutput, path: Path):
     html_str = render(output)
     path.write_text(html_str, encoding='utf-8')
     return path

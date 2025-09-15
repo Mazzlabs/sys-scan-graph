@@ -2,7 +2,7 @@ from __future__ import annotations
 import sqlite3, time, datetime
 from pathlib import Path
 from typing import Iterable, Tuple, Dict, List, Optional
-from .models import Finding
+import models
 
 SCHEMA_V1 = """
 CREATE TABLE IF NOT EXISTS baseline_finding (
@@ -112,7 +112,7 @@ class BaselineStore:
                 cur.execute("UPDATE baseline_meta SET value=? WHERE key='schema_version'", (str(CURRENT_SCHEMA_VERSION),))
         self.conn.commit()
 
-    def update_and_diff(self, host_id: str, findings: Iterable[Tuple[str, Finding]]):
+    def update_and_diff(self, host_id: str, findings: Iterable[Tuple[str, models.Finding]]):
         """Return dict mapping finding id(hash) -> delta info.
         Input iterable yields (scanner, finding)
         """

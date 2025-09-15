@@ -1,8 +1,11 @@
 from __future__ import annotations
 from typing import List, Dict, Tuple
 from collections import Counter
-from .models import Finding, Reductions
-from .redaction import redact_text
+import models
+import redaction
+Finding = models.Finding
+Reductions = models.Reductions
+redact_text = redaction.redact_text
 
 NOTABLE_MODULE_KEYS = {"br_netfilter","xt_MASQUERADE","bridge","iptable_nat","binfmt_misc"}
 

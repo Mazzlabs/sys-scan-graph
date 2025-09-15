@@ -1,0 +1,3 @@
+sys-scan-graph-dbgsym_5.0.0-1_amd64.ddeb debug optional automatic=yes
+sys-scan-graph_5.0.0-1_amd64.buildinfo admin optional
+sys-scan-graph_5.0.0-1_amd64.deb admin optional

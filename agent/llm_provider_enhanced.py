@@ -19,12 +19,20 @@ import json
 import os
 from pathlib import Path
 
-from .models import Reductions, Correlation, Summaries, ActionItem
-from .llm_provider import ILLMProvider, NullLLMProvider, ProviderMetadata
+import models
+import llm_provider
+Reductions = models.Reductions
+Correlation = models.Correlation
+Summaries = models.Summaries
+ActionItem = models.ActionItem
+ILLMProvider = llm_provider.ILLMProvider
+NullLLMProvider = llm_provider.NullLLMProvider
+ProviderMetadata = llm_provider.ProviderMetadata
 
 # Try to import data governance, fallback if not available
 try:
-    from .data_governance import get_data_governor
+    import data_governance
+    get_data_governor = data_governance.get_data_governor
 except ImportError:
     get_data_governor = lambda: None
 
@@ -55,7 +63,7 @@ class EnhancedLLMProvider(ILLMProvider):
 
         # Try to initialize LangChain provider
         try:
-            from .providers.langchain_provider import LangChainLLMProvider
+            from providers.langchain_provider import LangChainLLMProvider
             providers['langchain'] = LangChainLLMProvider()  # type: ignore
         except Exception as e:
             logger.warning(f"Failed to initialize LangChain provider: {e}")

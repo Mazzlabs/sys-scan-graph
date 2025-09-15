@@ -1,3 +1,39 @@
+sys-scan-graph (5.0.1-1) unstable; urgency=medium
+
+  * Release 5.0.1 with Debian packaging and apt repository support
+  * Added official Debian package with apt.mazzlabs.works repository
+  * Fixed import compatibility issues for Debian packaging
+  * Updated documentation with apt installation instructions
+  * Resolved pytest compatibility issues (pytest-asyncio version conflicts)
+  * Fixed relative import failures in legacy modules
+  * Added proper package structure with __init__.py files
+  * Improved redaction function handling for pipeline compatibility
+  * Enhanced test suite reliability and error handling
+  * Updated CI/CD pipeline for Debian package builds
+  * Added comprehensive installation documentation
+
+ -- Joseph Mazzini <joseph@mazzlabs.works>  Sat, 14 Sep 2025 12:00:00 +0000
+
+sys-scan-graph (5.0.0-1) unstable; urgency=medium
+
+  * Major version 5.0.0 release with Intelligence Layer integration
+  * Added AI-powered threat analysis and risk assessment
+  * Added graph-based attack path modeling
+  * Added automated rule generation and refinement
+  * Added advanced anomaly detection with LLM integration
+  * Added comprehensive reporting and visualization capabilities
+  * Enhanced security hardening with capability dropping and seccomp
+  * Added provenance metadata and supply-chain auditability
+  * Added GPG signing support for detached signatures
+  * Added NDJSON and SARIF output formats
+  * Added reproducibility and determinism features
+  * Updated JSON Schema to v2 with emitted metrics
+  * Added fuzz testing harness and sanitizer support
+  * Improved CI/CD pipeline with comprehensive testing
+  * Updated documentation and contributing guidelines
+
+ -- Joseph Mazzini <joseph@mazzlabs.works>  Mon, 25 Aug 2025 14:30:00 +0000
+
 sys-scan (0.1.0-1) unstable; urgency=medium
 
   * Initial Debian packaging (CMake build, JSON security scanner).

@@ -2,7 +2,7 @@ from __future__ import annotations
 import json, re, os, math
 from pathlib import Path
 from typing import List, Dict, Any, Tuple, Optional
-from .llm import LLMClient
+import llm
 import os
 
 TOKEN_RE = re.compile(r"[A-Za-z0-9_]+")
@@ -122,7 +122,7 @@ def refine_with_llm(suggestions: List[Dict[str,Any]], examples: Optional[Dict[st
       - Expand rationale with token list.
       - Add 'refined' tag.
     """
-    client = LLMClient()  # placeholder (not actually used for generation now)
+    client = llm.LLMClient()  # placeholder (not actually used for generation now)
     refined = []
     for s in suggestions:
         rid_val = s.get('id') or ''
@@ -152,8 +152,8 @@ def refine_with_llm(suggestions: List[Dict[str,Any]], examples: Optional[Dict[st
     # Optional secondary LLM refinement layer (real model integration stub)
     if os.environ.get('AGENT_RULE_REFINER_USE_LLM') == '1':
         try:
-            from .rule_refiner import llm_refine
-            refined = llm_refine(refined, examples or {})
+            import rule_refiner
+            refined = rule_refiner.llm_refine(refined, examples or {})
         except Exception:
             pass
     return refined

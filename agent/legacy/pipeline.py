@@ -1,30 +1,64 @@
 from __future__ import annotations
-import json, hashlib, os, uuid
+import json, hashlib, os, uuid, logging
 import json as _json
 from pathlib import Path
 from typing import List
-from .models import AgentState, Report, Finding, EnrichedOutput, ActionItem, ScannerResult, MultiHostCorrelation, Correlation, AgentWarning
-from .knowledge import apply_external_knowledge
-from .rules import Correlator, DEFAULT_RULES
-from .reduction import reduce_all
-from .llm_provider import get_llm_provider
-from .data_governance import get_data_governor
-from .baseline import BaselineStore
-from .metrics import get_metrics_collector
-from .canonicalize import canonicalize_enriched_output_dict
-from .risk import compute_risk, load_persistent_weights
-from .calibration import apply_probability
-from .graph_analysis import annotate_and_summarize
-from .endpoint_classification import classify as classify_host_role
-from .executors import hash_binary, query_package_manager
-from .integrity import sha256_file, verify_file
-from .audit import log_stage, hash_text
 import yaml
-from .baseline import process_feature_vector
 import yaml as _yaml
 import uuid as _uuid
-from .config import load_config
+import models
+import knowledge
+import rules
+import reduction
+import llm_provider
+import data_governance
+import baseline
+import metrics
+import canonicalize
+import risk
+import calibration
+import graph_analysis
+import endpoint_classification
+import executors
+import integrity
+import audit
+import config
 import concurrent.futures
+
+# Re-export for backward compatibility
+AgentState = models.AgentState
+Report = models.Report
+Finding = models.Finding
+EnrichedOutput = models.EnrichedOutput
+ActionItem = models.ActionItem
+ScannerResult = models.ScannerResult
+MultiHostCorrelation = models.MultiHostCorrelation
+Correlation = models.Correlation
+AgentWarning = models.AgentWarning
+apply_external_knowledge = knowledge.apply_external_knowledge
+Correlator = rules.Correlator
+DEFAULT_RULES = rules.DEFAULT_RULES
+reduce_all = reduction.reduce_all
+get_llm_provider = llm_provider.get_llm_provider
+get_data_governor = data_governance.get_data_governor
+BaselineStore = baseline.BaselineStore
+get_metrics_collector = metrics.get_metrics_collector
+canonicalize_enriched_output_dict = canonicalize.canonicalize_enriched_output_dict
+compute_risk = risk.compute_risk
+load_persistent_weights = risk.load_persistent_weights
+apply_probability = calibration.apply_probability
+annotate_and_summarize = graph_analysis.annotate_and_summarize
+classify_host_role = endpoint_classification.classify
+hash_binary = executors.hash_binary
+query_package_manager = executors.query_package_manager
+sha256_file = integrity.sha256_file
+verify_file = integrity.verify_file
+log_stage = audit.log_stage
+hash_text = audit.hash_text
+process_feature_vector = baseline.process_feature_vector
+load_config = config.load_config
+
+logger = logging.getLogger(__name__)
 
 # -----------------
 # Internal helpers (risk recomputation & error logging)
@@ -283,7 +317,10 @@ def correlate(state: AgentState) -> AgentState:
             all_findings.append(finding)
     cfg = load_config()
     # Merge default + rule dirs (dedupe by id keeping first)
-    from .rules import load_rules_dir, DEFAULT_RULES
+    try:
+        from ..rules import load_rules_dir, DEFAULT_RULES, Correlator
+    except ImportError:
+        from rules import load_rules_dir, DEFAULT_RULES, Correlator
     merged = []
     seen = set()
     for rd in (cfg.paths.rule_dirs or []):
@@ -350,7 +387,7 @@ def integrate_compliance(state: AgentState) -> AgentState:
                     g['remediation_hint'] = mapped
     # Attach into summaries.metrics (create if absent)
     if not state.summaries:
-        from .models import Summaries
+        Summaries = models.Summaries
         state.summaries = Summaries(metrics={})
     metrics = state.summaries.metrics or {}
     comp_export = {}
@@ -390,7 +427,7 @@ def baseline_rarity(state: AgentState, baseline_path: Path = Path("agent_baselin
     # Map back anomaly score
     for sr in state.report.results:
         for finding in sr.findings:
-            from .baseline import hashlib_sha
+            from baseline import hashlib_sha
             h = finding.identity_hash()
             comp = hashlib_sha(sr.scanner, h)
             d = deltas.get(comp)
@@ -499,7 +536,7 @@ def process_novelty(state: AgentState, baseline_path: Path = Path("agent_baselin
                 f.tags.append('process_novel')
             if f.risk_subscores:
                 prev = f.risk_subscores.get('anomaly', 0.0)
-                from .risk import CAPS
+                from risk import CAPS
                 cap = CAPS.get('anomaly', 2.0)
                 new_anom = round(min(prev + anomaly_boost, cap),2)
                 if new_anom != prev:
@@ -607,7 +644,12 @@ def summarize(state: AgentState) -> AgentState:
     skip = (high_med_sum < threshold) and (not new_found)
     prev = getattr(state, 'summaries', None)
     # Redact inputs before passing to provider (governance enforcement)
-    red_reductions = governor.redact_for_llm(state.reductions)
+    try:
+        from redaction import redact_reductions
+        red_reductions = redact_reductions(state.reductions)
+    except ImportError:
+        # Fallback to data governance if redaction module not available
+        red_reductions = governor.redact_for_llm(state.reductions)
     red_correlations = [governor.redact_for_llm(c) for c in state.correlations]
     red_actions = [governor.redact_for_llm(a) for a in state.actions]
     mc = get_metrics_collector()
@@ -744,7 +786,7 @@ def build_output(state: AgentState, raw_path: Path) -> EnrichedOutput:
         threshold = max(0.0, float(threshold_env))/100.0
     except ValueError:
         threshold = 0.30
-    from .metrics import MetricsCollector
+    from metrics import MetricsCollector
     base = MetricsCollector.load_baseline(baseline_path)
     regressions = MetricsCollector.compare_to_baseline(perf_snap, base or {}, threshold) if base else []
     perf_snap['baseline_regressions'] = regressions
@@ -773,25 +815,15 @@ def build_output(state: AgentState, raw_path: Path) -> EnrichedOutput:
     # Populate meta.analytics (INT-OBS-001) with concise summary (avoid large arrays)
     try:
         if state.report and state.report.meta:
-            if not state.report.meta.analytics:
-                state.report.meta.analytics = {}
-            # Summarize durations
-            dur_summary = {k: { 'avg_ms': round(v.get('avg',0),2), 'total_ms': v.get('total',0), 'count': v.get('count',0)} for k,v in perf_snap.get('durations', {}).items()}
-            state.report.meta.analytics.update({
-                'performance': {
-                    'durations': dur_summary,
-                    'counters': perf_snap.get('counters', {}),
-                    'regressions': perf_snap.get('baseline_regressions', []),
-                    'regression_threshold_pct': perf_snap.get('baseline_threshold_pct')
-                }
-            })
+            # Analytics field not in Meta model, skip for now
+            pass
     except Exception:
         pass
     # Apply deterministic canonical ordering to entire output
     try:
         out_dict = out.model_dump()
         canon = canonicalize_enriched_output_dict(out_dict)
-        from .models import EnrichedOutput as _EO
+        from models import EnrichedOutput as _EO
         out = _EO(**canon)
     except Exception:
         # On failure, fall back to original out
@@ -812,7 +844,7 @@ def _augment_with_corpus_insights(state: AgentState):
     if not os.environ.get('AGENT_LOAD_HF_CORPUS'):
         return state
     try:
-        from . import hf_loader  # lazy import
+        import hf_loader
     except Exception as e:  # module absent
         _log_error('corpus_import', e)
         return state
@@ -1049,7 +1081,7 @@ def run_pipeline(report_path: Path) -> EnrichedOutput:
                         metadata={'module': module, 'host_cluster_size': len(hosts)},
                         category='cross_host',
                         tags=['synthetic','cross_host','module_propagation'],
-                        risk_subscores={'impact': 5.0, 'exposure': 0.0, 'anomaly': min(1.5, (__import__('agent.risk', fromlist=['CAPS']).CAPS.get('anomaly',2.0))), 'confidence': 0.8},
+                        risk_subscores={'impact': 5.0, 'exposure': 0.0, 'anomaly': min(1.5, (__import__('risk', fromlist=['CAPS']).CAPS.get('anomaly',2.0))), 'confidence': 0.8},
                         baseline_status='new'
                     )
                     _recompute_finding_risk(synth)
@@ -1087,7 +1119,7 @@ def run_pipeline(report_path: Path) -> EnrichedOutput:
                     if bin_path:
                         results['hash_binary'] = hash_binary(bin_path)
                         results['query_package_manager'] = query_package_manager(bin_path)
-                    from .models import FollowupResult
+                    from models import FollowupResult
                     state.followups.append(FollowupResult(finding_id=f.id, plan=plan, results=results))
                     try:
                         log_stage('followup_execute', finding_id=f.id, plan=";".join(plan))

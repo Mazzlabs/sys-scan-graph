@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import List, Dict, Any
-from .models import Finding, Correlation
+import models
 from collections import defaultdict
 import os, json, hashlib, time
 try:
@@ -53,7 +53,7 @@ class Correlator:
         self.rules = rules
 
     @staticmethod
-    def match_condition(f: Finding, cond: Dict) -> bool:
+    def match_condition(f: models.Finding, cond: Dict) -> bool:
         # cond: {field, contains, equals, metadata_key, metadata_contains}
         field = cond.get("field")
         if field:
@@ -73,8 +73,8 @@ class Correlator:
                 return False
         return True
 
-    def apply(self, findings: List[Finding]) -> List[Correlation]:
-        correlations: List[Correlation] = []
+    def apply(self, findings: List[models.Finding]) -> List[models.Correlation]:
+        correlations: List[models.Correlation] = []
         by_id = {f.id: f for f in findings}
         # Index by tags for multi-finding joins
         tag_index = defaultdict(list)
@@ -115,7 +115,7 @@ class Correlator:
                 exposure_bonus = len(exposure_tags)
                 base_delta = r.get("risk_score_delta",0)
                 corr_id = r.get("id") or f"corr_{len(correlations)+1}"
-                correlations.append(Correlation(
+                correlations.append(models.Correlation(
                     id=corr_id,
                     title=r.get("title","Unnamed Correlation"),
                     rationale=r.get("rationale",""),
@@ -234,7 +234,7 @@ def lint_rules(rules: List[Dict[str, Any]]) -> List[Dict[str,str]]:
                 issues.append({'rule_id': r.get('id','?'), 'code':'missing_required_tag', 'detail': t})
     return issues
 
-def dry_run_apply(rules: List[Dict[str, Any]], findings: List[Finding]) -> Dict[str,List[str]]:
+def dry_run_apply(rules: List[Dict[str, Any]], findings: List[models.Finding]) -> Dict[str,List[str]]:
     result: Dict[str,List[str]] = {}
     for r in rules:
         rid = r.get('id','?')

@@ -1,0 +1,34 @@
+#!/bin/sh
+set -e
+
+# Post-removal script for sys-scan-graph
+
+case "$1" in
+    purge)
+        # Remove configuration and data directories
+        if [ -d /etc/sys-scan-graph ]; then
+            rm -rf /etc/sys-scan-graph
+        fi
+
+        if [ -d /var/log/sys-scan-graph ]; then
+            rm -rf /var/log/sys-scan-graph
+        fi
+
+        if [ -d /opt/sys-scan-graph ]; then
+            rm -rf /opt/sys-scan-graph
+        fi
+        ;;
+
+    remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
+        # Nothing special to do for these cases
+        ;;
+
+    *)
+        echo "postrm called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+
+
+exit 0

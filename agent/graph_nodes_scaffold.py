@@ -23,32 +23,29 @@ from typing import Any, Dict, List, Optional, TYPE_CHECKING
 GraphState = Dict[str, Any]  # type: ignore
 
 # Core provider & helper imports (existing project modules)
-from .llm_provider import get_llm_provider  # LLM provider abstraction
-from .legacy.graph_nodes import _findings_from_graph, _append_warning  # Reuse existing parsing & warning helpers
-from .pipeline import augment as _augment  # Core augmentation stage
-from .knowledge import apply_external_knowledge  # External knowledge enrichment
-from .reduction import reduce_all  # Reduction / summarization helpers
-from .rule_gap_miner import mine_gap_candidates  # Rule gap mining utility
-from .graph_state import normalize_graph_state  # GraphState normalization
-from .util_hash import stable_hash  # Shared stable hash utility
-from .util_normalization import (  # Shared normalization utilities
-    normalize_rule_suggestions,
-    unify_risk_assessment,
-    unify_compliance_check,
-    ensure_monotonic_timing,
-    add_metrics_version,
-)
+import llm_provider
+import legacy.graph_nodes
+import pipeline
+import knowledge
+import reduction
+import rule_gap_miner
+import graph_state
+import util_hash
+import util_normalization
+import models
+import rules
 
 # Pydantic model imports (data structures used across node logic)
-from .models import (
-    Finding,
-    ScannerResult,
-    Report,
-    Meta,
-    Summary,
-    SummaryExtension,
-    AgentState,
-)
+# Models imported at module level for absolute imports
+
+# Re-export models for __all__
+Finding = models.Finding
+ScannerResult = models.ScannerResult
+Report = models.Report
+Meta = models.Meta
+Summary = models.Summary
+SummaryExtension = models.SummaryExtension
+AgentState = models.AgentState
 
 logger = logging.getLogger(__name__)
 
@@ -79,38 +76,38 @@ def _normalize_compliance_standard(raw: str) -> Optional[str]:
     key = raw.lower().replace(' ', '')
     return _COMPLIANCE_ALIASES.get(key)
 
-def _build_finding_models(findings_dicts: List[Dict[str, Any]]) -> List[Finding]:
+def _build_finding_models(findings_dicts: List[Dict[str, Any]]) -> List[models.Finding]:
     """Optimized conversion of finding dicts to Pydantic models with error handling."""
-    models = []
+    models_list = []
     for finding_dict in findings_dicts:
         try:
             # Use only valid fields to avoid validation errors
             valid_fields = {k: v for k, v in finding_dict.items()
-                          if k in Finding.model_fields}
-            models.append(Finding(**valid_fields))
+                          if k in models.Finding.model_fields}
+            models_list.append(models.Finding(**valid_fields))
         except Exception:  # pragma: no cover
             continue
-    return models
+    return models_list
 
-def _build_agent_state(findings: List[Finding], scanner_name: str = "mixed") -> AgentState:
+def _build_agent_state(findings: List[models.Finding], scanner_name: str = "mixed") -> models.AgentState:
     """Optimized construction of AgentState from findings."""
-    sr = ScannerResult(
+    sr = models.ScannerResult(
         scanner=scanner_name,
         finding_count=len(findings),
         findings=findings,
     )
-    report = Report(
-        meta=Meta(),
-        summary=Summary(
+    report = models.Report(
+        meta=models.Meta(),
+        summary=models.Summary(
             finding_count_total=len(findings),
             finding_count_emitted=len(findings),
         ),
         results=[sr],
         collection_warnings=[],
         scanner_errors=[],
-        summary_extension=SummaryExtension(total_risk_score=0),
+        summary_extension=models.SummaryExtension(total_risk_score=0),
     )
-    return AgentState(report=report)
+    return models.AgentState(report=report)
 
 # Type alias for better readability
 StateType = Dict[str, Any]  # type: ignore
@@ -349,32 +346,32 @@ def enrich_findings(state: StateType) -> StateType:
     nodes can continue operating deterministically.
     """
     # Normalize state to ensure all mandatory keys exist
-    state = normalize_graph_state(state)
+    state = graph_state.normalize_graph_state(state)
     
     # Ensure monotonic timing is initialized for accurate duration calculations
-    state = ensure_monotonic_timing(state)
+    state = util_normalization.ensure_monotonic_timing(state)
 
     try:
-        findings = _findings_from_graph(state)  # type: ignore
-        sr = ScannerResult(
+        findings = legacy.graph_nodes._findings_from_graph(state)  # type: ignore
+        sr = models.ScannerResult(
             scanner="mixed",
             finding_count=len(findings),
             findings=findings,
         )
-        report = Report(
-            meta=Meta(),
-            summary=Summary(
+        report = models.Report(
+            meta=models.Meta(),
+            summary=models.Summary(
                 finding_count_total=len(findings),
                 finding_count_emitted=len(findings),
             ),
             results=[sr],
             collection_warnings=[],
             scanner_errors=[],
-            summary_extension=SummaryExtension(total_risk_score=0),
+            summary_extension=models.SummaryExtension(total_risk_score=0),
         )
-        astate = AgentState(report=report)
-        astate = _augment(astate)
-        astate = apply_external_knowledge(astate)
+        astate = models.AgentState(report=report)
+        astate = pipeline.augment(astate)
+        astate = knowledge.apply_external_knowledge(astate)
 
         enriched: List[Dict[str, Any]] = []
         if astate.report and astate.report.results:
@@ -400,30 +397,29 @@ def summarize_host_state(state: StateType) -> StateType:
     Optimized: Uses helper functions and cached environment variables.
     """
     # Normalize state to ensure all mandatory keys exist
-    state = normalize_graph_state(state)
+    state = graph_state.normalize_graph_state(state)
     
     # Ensure monotonic timing is initialized for accurate duration calculations
-    state = ensure_monotonic_timing(state)
+    state = util_normalization.ensure_monotonic_timing(state)
 
     # Iteration guard with cached env var
     max_iter = int(_get_env_var('AGENT_MAX_SUMMARY_ITERS', '3'))
     iters = int(state.get('iteration_count', 0) or 0)
     if iters >= max_iter:
-        _append_warning(state, 'graph', 'summarize', 'iteration_limit_reached')  # type: ignore
+        legacy.graph_nodes._append_warning(state, 'graph', 'summarize', 'iteration_limit_reached')  # type: ignore
         return state
     
     try:
-        provider = get_llm_provider()
+        provider = llm_provider.get_llm_provider()
         findings_src = _extract_findings_from_state(state, 'correlated_findings')
         findings_models = _build_finding_models(findings_src)
 
-        reductions = reduce_all(findings_models)
+        reductions = reduction.reduce_all(findings_models)
         # Rehydrate correlations (if present)
-        from .models import Correlation as _C
         corr_objs = []
         for c in state.get('correlations', []) or []:
             try:
-                corr_objs.append(_C(**c))
+                corr_objs.append(models.Correlation(**c))
             except Exception:  # pragma: no cover
                 continue
         baseline_context = state.get('baseline_results') or {}
@@ -432,7 +428,7 @@ def summarize_host_state(state: StateType) -> StateType:
         state['iteration_count'] = iters + 1
     except Exception as e:  # pragma: no cover
         logger.exception("summarize_host_state failed: %s", e)
-        _append_warning(state, 'graph', 'summarize', str(e))  # type: ignore
+        legacy.graph_nodes._append_warning(state, 'graph', 'summarize', str(e))  # type: ignore
     return state
 
 
@@ -442,10 +438,10 @@ def suggest_rules(state: StateType) -> StateType:
     Optimized: Uses helper functions and eliminates redundant temp file usage.
     """
     # Normalize state to ensure all mandatory keys exist
-    state = normalize_graph_state(state)
+    state = graph_state.normalize_graph_state(state)
     
     # Ensure monotonic timing is initialized for accurate duration calculations
-    state = ensure_monotonic_timing(state)
+    state = util_normalization.ensure_monotonic_timing(state)
 
     tf_path = None
     try:
@@ -462,12 +458,12 @@ def suggest_rules(state: StateType) -> StateType:
             tf_path = tf.name
             _json.dump({'enriched_findings': findings}, tf)
             tf.flush()
-            result = mine_gap_candidates([Path(tf.name)], risk_threshold=10, min_support=2)
+            result = rule_gap_miner.mine_gap_candidates([Path(tf.name)], risk_threshold=10, min_support=2)
 
         state['suggested_rules'] = result.get('suggestions', [])
     except Exception as e:  # pragma: no cover
         logger.exception("suggest_rules failed: %s", e)
-        _append_warning(state, 'graph', 'rule_mine', str(e))  # type: ignore
+        legacy.graph_nodes._append_warning(state, 'graph', 'rule_mine', str(e))  # type: ignore
     finally:
         if tf_path:
             try:
@@ -484,10 +480,10 @@ def correlate_findings(state: StateType) -> StateType:
     Optimized: Uses helper functions and reduces redundant operations.
     """
     # Normalize state to ensure all mandatory keys exist
-    state = normalize_graph_state(state)
+    state = graph_state.normalize_graph_state(state)
     
     # Ensure monotonic timing is initialized for accurate duration calculations
-    state = ensure_monotonic_timing(state)
+    state = util_normalization.ensure_monotonic_timing(state)
 
     try:
         findings_dicts = _extract_findings_from_state(state, 'enriched_findings')
@@ -503,8 +499,7 @@ def correlate_findings(state: StateType) -> StateType:
             return state
 
         astate = _build_agent_state(findings_models, "mixed")
-        from .rules import Correlator, DEFAULT_RULES  # local import to avoid circulars on module load
-        correlator = Correlator(DEFAULT_RULES)
+        correlator = rules.Correlator(rules.DEFAULT_RULES)
         correlations = correlator.apply(findings_models)
 
         # Optimized correlation attachment using dict lookup
@@ -519,7 +514,7 @@ def correlate_findings(state: StateType) -> StateType:
         state['correlations'] = [c.model_dump() for c in correlations]
     except Exception as e:  # pragma: no cover
         logger.exception("correlate_findings failed: %s", e)
-        _append_warning(state, 'graph', 'correlate', str(e))  # type: ignore
+        legacy.graph_nodes._append_warning(state, 'graph', 'correlate', str(e))  # type: ignore
         if 'correlated_findings' not in state:
             state['correlated_findings'] = state.get('enriched_findings', [])
     return state
@@ -531,7 +526,7 @@ async def enhanced_enrich_findings(state: StateType) -> StateType:
     Optimized: Uses helper functions for state initialization and metrics.
     """
     # Normalize state to ensure all mandatory keys exist
-    state = normalize_graph_state(state)
+    state = graph_state.normalize_graph_state(state)
 
     start = time.monotonic()
     raw_list = state.get("raw_findings") or []
@@ -541,7 +536,7 @@ async def enhanced_enrich_findings(state: StateType) -> StateType:
 
     # Build deterministic cache key (sha256 of canonical JSON of raw findings)
     try:
-        cache_key = stable_hash(raw_list, "enrich")
+        cache_key = util_hash.stable_hash(raw_list, "enrich")
     except Exception:  # pragma: no cover - extremely unlikely
         cache_key = "enrich:invalid_key"
 
@@ -561,11 +556,11 @@ async def enhanced_enrich_findings(state: StateType) -> StateType:
 
     # Cache miss -> perform enrichment
     try:
-        findings = _findings_from_graph(state)  # type: ignore
+        findings = legacy.graph_nodes._findings_from_graph(state)  # type: ignore
         astate = _build_agent_state(findings, "mixed")
         # Run enrichment pipeline pieces (sync) inside async context
-        astate = _augment(astate)
-        astate = apply_external_knowledge(astate)
+        astate = pipeline.augment(astate)
+        astate = knowledge.apply_external_knowledge(astate)
 
         enriched: List[Dict[str, Any]] = []
         if astate.report and astate.report.results:
@@ -584,7 +579,7 @@ async def enhanced_enrich_findings(state: StateType) -> StateType:
             ck_list.append(cache_key)
     except Exception as e:  # pragma: no cover
         logger.exception("enhanced_enrich_findings failed key=%s error=%s", cache_key, e)
-        _append_warning(state, "graph", "enhanced_enrich", f"{type(e).__name__}: {e}")  # type: ignore
+        legacy.graph_nodes._append_warning(state, "graph", "enhanced_enrich", f"{type(e).__name__}: {e}")  # type: ignore
         if "enriched_findings" not in state:
             state["enriched_findings"] = state.get("raw_findings", [])
 
@@ -603,12 +598,11 @@ def get_enhanced_llm_provider():
     Deterministic by design (no randomness).
     """
     # Basic strategy: prefer primary; optionally allow alternate env variable if set and distinct
-    primary = get_llm_provider()
+    primary = llm_provider.get_llm_provider()
     alt_env = __import__('os').environ.get('AGENT_LLM_PROVIDER_ALT')
     if alt_env and alt_env == '__use_null__':  # explicit override to force Null provider
         try:
-            from .llm_provider import NullLLMProvider  # type: ignore
-            return NullLLMProvider()
+            return llm_provider.NullLLMProvider()
         except Exception:  # pragma: no cover
             return primary
     return primary
@@ -639,7 +633,7 @@ async def enhanced_summarize_host_state(state: StateType) -> StateType:
     Optimized: Uses helper functions and cached environment variables.
     """
     # Normalize state to ensure all mandatory keys exist
-    state = normalize_graph_state(state)
+    state = graph_state.normalize_graph_state(state)
 
     start = time.monotonic()
     try:
@@ -647,19 +641,18 @@ async def enhanced_summarize_host_state(state: StateType) -> StateType:
         max_iter = int(_get_env_var('AGENT_MAX_SUMMARY_ITERS', '3'))
         iters = int(state.get('iteration_count', 0) or 0)
         if iters >= max_iter:
-            _append_warning(state, 'graph', 'enhanced_summarize', 'iteration_limit_reached')  # type: ignore
+            legacy.graph_nodes._append_warning(state, 'graph', 'enhanced_summarize', 'iteration_limit_reached')  # type: ignore
             return state
 
         provider = get_enhanced_llm_provider()
         findings_src = _extract_findings_from_state(state, 'correlated_findings')
         findings_models = _build_finding_models(findings_src)
 
-        reductions = reduce_all(findings_models)
-        from .models import Correlation as _C
+        reductions = reduction.reduce_all(findings_models)
         corr_objs = []
         for c in state.get('correlations', []) or []:
             try:
-                corr_objs.append(_C(**c))
+                corr_objs.append(models.Correlation(**c))
             except Exception:  # pragma: no cover
                 continue
 
@@ -683,7 +676,7 @@ async def enhanced_summarize_host_state(state: StateType) -> StateType:
         _update_metrics_counter(state, 'summarize_calls')
     except Exception as e:  # pragma: no cover
         logger.exception('enhanced_summarize_host_state failed: %s', e)
-        _append_warning(state, 'graph', 'enhanced_summarize', f"{type(e).__name__}: {e}")  # type: ignore
+        legacy.graph_nodes._append_warning(state, 'graph', 'enhanced_summarize', f"{type(e).__name__}: {e}")  # type: ignore
     finally:
         _update_metrics_duration(state, 'summarize_duration', start)
     return state
@@ -695,7 +688,7 @@ async def enhanced_suggest_rules(state: StateType) -> StateType:
     Optimized: Uses helper functions, cached env vars, and eliminates temp file usage.
     """
     # Normalize state to ensure all mandatory keys exist
-    state = normalize_graph_state(state)
+    state = graph_state.normalize_graph_state(state)
 
     start = time.monotonic()
     tf_path = None
@@ -728,7 +721,7 @@ async def enhanced_suggest_rules(state: StateType) -> StateType:
             tf.flush()
             from pathlib import Path
             # Use slightly permissive thresholds to increase suggestion probability
-            result = mine_gap_candidates([Path(tf.name)], risk_threshold=10, min_support=2)
+            result = rule_gap_miner.mine_gap_candidates([Path(tf.name)], risk_threshold=10, min_support=2)
         
         suggestions = result.get('suggestions', [])
         
@@ -751,9 +744,9 @@ async def enhanced_suggest_rules(state: StateType) -> StateType:
         state['suggested_rules'] = suggestions
 
         # Apply unified normalization
-        state = normalize_rule_suggestions(state)
-        state = ensure_monotonic_timing(state)
-        state = add_metrics_version(state)
+        state = util_normalization.normalize_rule_suggestions(state)
+        state = util_normalization.ensure_monotonic_timing(state)
+        state = util_normalization.add_metrics_version(state)
 
         # Metrics with helper
         _update_metrics_counter(state, 'rule_suggest_calls')
@@ -761,7 +754,7 @@ async def enhanced_suggest_rules(state: StateType) -> StateType:
         metrics['rule_suggest_count'] = len(suggestions) if hasattr(suggestions, '__len__') else 0
     except Exception as e:  # pragma: no cover
         logger.exception('enhanced_suggest_rules failed: %s', e)
-        _append_warning(state, 'graph', 'enhanced_suggest_rules', f"{type(e).__name__}: {e}")  # type: ignore
+        legacy.graph_nodes._append_warning(state, 'graph', 'enhanced_suggest_rules', f"{type(e).__name__}: {e}")  # type: ignore
     finally:
         _update_metrics_duration(state, 'rule_suggest_duration', start)
         if tf_path:
@@ -779,11 +772,11 @@ def advanced_router(state: StateType) -> str:
     Optimized: Uses batch processing to eliminate redundant finding iterations.
     """
     # Normalize state to ensure all mandatory keys exist
-    state = normalize_graph_state(state)
+    state = graph_state.normalize_graph_state(state)
     
     try:
         # Ensure monotonic timing is initialized for accurate duration calculations
-        state = ensure_monotonic_timing(state)
+        state = util_normalization.ensure_monotonic_timing(state)
 
         # 1. Human feedback gate
         if state.get('human_feedback_pending'):
@@ -829,10 +822,10 @@ def should_suggest_rules(state: StateType) -> str:
     Optimized: Uses batch processing to eliminate redundant finding iterations.
     """
     # Normalize state to ensure all mandatory keys exist
-    state = normalize_graph_state(state)
+    state = graph_state.normalize_graph_state(state)
     
     # Ensure monotonic timing is initialized for accurate duration calculations
-    state = ensure_monotonic_timing(state)
+    state = util_normalization.ensure_monotonic_timing(state)
 
     try:
         enriched = state.get('enriched_findings') or []
@@ -865,10 +858,10 @@ def choose_post_summarize(state: StateType) -> str:
     Optimized: Uses batch processing to eliminate redundant finding iterations.
     """
     # Normalize state to ensure all mandatory keys exist
-    state = normalize_graph_state(state)
+    state = graph_state.normalize_graph_state(state)
     
     # Ensure monotonic timing is initialized for accurate duration calculations
-    state = ensure_monotonic_timing(state)
+    state = util_normalization.ensure_monotonic_timing(state)
 
     try:
         if not state.get('baseline_cycle_done'):
@@ -901,10 +894,10 @@ async def tool_coordinator(state: StateType) -> StateType:
     Optimized: Uses batch processing to eliminate redundant finding iterations.
     """
     # Normalize state to ensure all mandatory keys exist
-    state = normalize_graph_state(state)
+    state = graph_state.normalize_graph_state(state)
     
     # Ensure monotonic timing is initialized for accurate duration calculations
-    state = ensure_monotonic_timing(state)
+    state = util_normalization.ensure_monotonic_timing(state)
 
     start = time.monotonic()
     try:
@@ -965,10 +958,10 @@ def plan_baseline_queries(state: StateType) -> StateType:
     Optimized: Uses batch processing to eliminate redundant finding iterations.
     """
     # Normalize state to ensure all mandatory keys exist
-    state = normalize_graph_state(state)
+    state = graph_state.normalize_graph_state(state)
     
     # Ensure monotonic timing is initialized for accurate duration calculations
-    state = ensure_monotonic_timing(state)
+    state = util_normalization.ensure_monotonic_timing(state)
 
     try:
         if AIMessage is None:  # dependency not available
@@ -1037,10 +1030,10 @@ def integrate_baseline_results(state: StateType) -> StateType:
     Sets baseline_cycle_done = True always (conservative to avoid infinite loops).
     """
     # Normalize state to ensure all mandatory keys exist
-    state = normalize_graph_state(state)
+    state = graph_state.normalize_graph_state(state)
     
     # Ensure monotonic timing is initialized for accurate duration calculations
-    state = ensure_monotonic_timing(state)
+    state = util_normalization.ensure_monotonic_timing(state)
 
     try:
         if ToolMessage is None:
@@ -1091,7 +1084,7 @@ async def risk_analyzer(state: StateType) -> StateType:
     Optimized: Uses batch processing to eliminate redundant finding iterations and optimize sorting.
     """
     # Normalize state to ensure all mandatory keys exist
-    state = normalize_graph_state(state)
+    state = graph_state.normalize_graph_state(state)
 
     start = time.monotonic()
     try:
@@ -1136,9 +1129,9 @@ async def risk_analyzer(state: StateType) -> StateType:
         state['risk_assessment'] = assessment
 
         # Apply unified normalization
-        state = unify_risk_assessment(state)
-        state = ensure_monotonic_timing(state)
-        state = add_metrics_version(state)
+        state = util_normalization.unify_risk_assessment(state)
+        state = util_normalization.ensure_monotonic_timing(state)
+        state = util_normalization.add_metrics_version(state)
 
         _update_metrics_counter(state, 'risk_analyzer_calls')
     except Exception as e:  # pragma: no cover
@@ -1155,7 +1148,7 @@ async def compliance_checker(state: StateType) -> StateType:
     Optimized: Uses batch processing to eliminate redundant finding iterations and optimize compliance mapping.
     """
     # Normalize state to ensure all mandatory keys exist
-    state = normalize_graph_state(state)
+    state = graph_state.normalize_graph_state(state)
 
     start = time.monotonic()
     try:
@@ -1192,9 +1185,9 @@ async def compliance_checker(state: StateType) -> StateType:
         }
 
         # Apply unified normalization
-        state = unify_compliance_check(state)
-        state = ensure_monotonic_timing(state)
-        state = add_metrics_version(state)
+        state = util_normalization.unify_compliance_check(state)
+        state = util_normalization.ensure_monotonic_timing(state)
+        state = util_normalization.add_metrics_version(state)
 
         _update_metrics_counter(state, 'compliance_checker_calls')
     except Exception as e:  # pragma: no cover
@@ -1214,7 +1207,7 @@ async def error_handler(state: StateType) -> StateType:
     Optimized: Uses helper functions and standardized metrics.
     """
     # Normalize state to ensure all mandatory keys exist
-    state = normalize_graph_state(state)
+    state = graph_state.normalize_graph_state(state)
 
     start = time.monotonic()
     try:
@@ -1256,7 +1249,7 @@ async def human_feedback_node(state: StateType) -> StateType:
     Optimized: Uses helper functions and standardized metrics.
     """
     # Normalize state to ensure all mandatory keys exist
-    state = normalize_graph_state(state)
+    state = graph_state.normalize_graph_state(state)
 
     start = time.monotonic()
     try:
@@ -1285,7 +1278,7 @@ async def cache_manager(state: StateType) -> StateType:
     Optimized: Uses helper functions and standardized metrics.
     """
     # Normalize state to ensure all mandatory keys exist
-    state = normalize_graph_state(state)
+    state = graph_state.normalize_graph_state(state)
 
     start = time.monotonic()
     try:
@@ -1294,7 +1287,7 @@ async def cache_manager(state: StateType) -> StateType:
         enriched = state.get('enriched_findings')
         if enriched is not None:
             try:
-                ek = stable_hash(enriched, "enrich")
+                ek = util_hash.stable_hash(enriched, "enrich")
                 if ek not in cache_store:
                     cache_store[ek] = enriched
             except Exception:  # pragma: no cover
@@ -1332,7 +1325,7 @@ async def metrics_collector(state: StateType) -> StateType:
     Optimized: Uses helper functions and standardized metrics.
     """
     # Normalize state to ensure all mandatory keys exist
-    state = normalize_graph_state(state)
+    state = graph_state.normalize_graph_state(state)
 
     start = time.monotonic()
     try:
@@ -1368,10 +1361,7 @@ async def metrics_collector(state: StateType) -> StateType:
 # Re-declare __all__ at module end to ensure late-added symbols are included.
 # ---------------------------------------------------------------------------
 __all__ = [
-    # Core state & helpers
-    'GraphState', 'get_llm_provider', '_findings_from_graph', '_append_warning', '_augment',
-    'apply_external_knowledge', 'reduce_all', 'mine_gap_candidates',
-    # Core / enhanced enrichment & summarization
+    # Core enrichment & summarization
     'enrich_findings', 'enhanced_enrich_findings', 'summarize_host_state', 'enhanced_summarize_host_state',
     # Rule suggestion & correlation
     'suggest_rules', 'enhanced_suggest_rules', 'correlate_findings',
@@ -1385,6 +1375,12 @@ __all__ = [
     'risk_analyzer', 'compliance_checker',
     # Operational nodes
     'error_handler', 'human_feedback_node', 'cache_manager', 'metrics_collector',
-    # Models
-    'Finding', 'ScannerResult', 'Report', 'Meta', 'Summary', 'SummaryExtension', 'AgentState'
+    # Models (re-exported for convenience)
+    "Finding",
+    "ScannerResult", 
+    "Report",
+    "Meta",
+    "Summary",
+    "SummaryExtension",
+    "AgentState",
 ]

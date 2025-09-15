@@ -3,7 +3,7 @@ import re, json
 from copy import deepcopy
 from pathlib import Path
 from typing import List, Pattern, Dict, Any
-from .models import Reductions
+import models
 
 DEFAULT_RULES = [
     {"pattern": r"/home/([A-Za-z0-9_.-]+)", "replacement": "/home/<user>"},
@@ -93,7 +93,7 @@ def redact_obj(obj: Any):  # pragma: no cover small helper
     return obj
 
 
-def redact_reductions(reductions: Reductions) -> Reductions:
+def redact_reductions(reductions: models.Reductions) -> models.Reductions:
     red = deepcopy(reductions)
     # top_findings / top_risks titles and maybe tags
     new_tf = []

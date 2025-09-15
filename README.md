@@ -36,7 +36,23 @@ It combines a high-performance C++ scanning engine with a Python-based intellige
 
 ## Quick Start
 
-### Basic Usage
+### Installation
+
+#### Option 1: Install from Debian Package (Recommended)
+
+```bash
+# Add the Mazzlabs repository
+echo "deb [signed-by=/usr/share/keyrings/mazzlabs-archive-keyring.gpg] https://apt.mazzlabs.works/ stable main" | sudo tee /etc/apt/sources.list.d/mazzlabs.list
+
+# Import the GPG key
+curl -fsSL https://apt.mazzlabs.works/mazzlabs-archive-keyring.gpg | sudo gpg --dearmor -o /usr/share/keyrings/mazzlabs-archive-keyring.gpg
+
+# Update package lists and install
+sudo apt update
+sudo apt install sys-scan-graph
+```
+
+#### Option 2: Build from Source
 
 ```bash
 # Clone the repository
@@ -47,19 +63,33 @@ cd sys-scan-graph
 cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j$(nproc)
 
-# Run a basic scan
-./build/sys-scan --canonical --modules-summary --min-severity info > report.json
+# Install Python dependencies for intelligence layer
+cd agent
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-### With Intelligence Layer
+### Basic Usage
+
+#### Using Installed Package
 
 ```bash
-# Set up Python environment
-python -m venv agent/.venv
-source agent/.venv/bin/activate
-pip install -r agent/requirements.txt
+# Run a basic scan
+sys-scan --canonical --modules-summary --min-severity info > report.json
 
-# Run enriched analysis
+# Run with intelligence layer
+sys-scan --canonical --output report.json
+sys-scan-graph-agent analyze --report report.json --out enriched_report.json
+```
+
+#### Using Source Build
+
+```bash
+# Run a basic scan
+./build/sys-scan --canonical --modules-summary --min-severity info > report.json
+
+# Run with intelligence layer
 ./build/sys-scan --canonical --output report.json
 python -m agent.cli analyze --report report.json --out enriched_report.json
 ```
@@ -68,7 +98,7 @@ python -m agent.cli analyze --report report.json --out enriched_report.json
 
 ```bash
 # Enable HTML generation in config.yaml, then run:
-python -m agent.cli analyze --report report.json --out enriched_v2.json --prev enriched_report.json
+sys-scan-graph-agent analyze --report report.json --out enriched_v2.json --prev enriched_report.json
 ```
 
 ---

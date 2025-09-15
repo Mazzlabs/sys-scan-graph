@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "FleetReport",
+  "type": "object",
+  "required": [
+    "generated_ts",
+    "host_count",
+    "metric_mean",
+    "metric_std",
+    "top_outlier_hosts",
+    "newly_common_modules",
+    "risk_distribution"
+  ],
+  "properties": {
+    "generated_ts": {"type": "integer"},
+    "host_count": {"type": "integer", "minimum": 0},
+    "metric_mean": {"type": "number"},
+    "metric_std": {"type": "number", "minimum": 0},
+    "top_outlier_hosts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["host_id", "value", "z", "ts"],
+        "properties": {
+          "host_id": {"type": "string"},
+          "value": {"type": "number"},
+          "z": {"type": "number"},
+            "ts": {"type": "integer"}
+        },
+        "additionalProperties": true
+      }
+    },
+    "newly_common_modules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["module", "host_count", "hosts"],
+        "properties": {
+          "module": {"type": "string"},
+          "host_count": {"type": "integer", "minimum": 1},
+          "hosts": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": true
+      }
+    },
+    "risk_distribution": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["range", "count"],
+        "properties": {
+          "range": {"type": "string"},
+          "count": {"type": "integer", "minimum": 0}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

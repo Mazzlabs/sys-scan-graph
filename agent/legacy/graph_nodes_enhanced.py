@@ -28,7 +28,10 @@ from .knowledge import apply_external_knowledge
 from .pipeline import augment as _augment
 from .reduction import reduce_all
 from .llm_provider import get_llm_provider
-from .rules import Correlator, DEFAULT_RULES
+try:
+    from ..rules import Correlator, DEFAULT_RULES
+except ImportError:
+    from rules import Correlator, DEFAULT_RULES
 from .rule_gap_miner import mine_gap_candidates
 from .graph_state import normalize_graph_state
 from .metrics_node import time_node

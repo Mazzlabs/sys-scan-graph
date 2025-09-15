@@ -12,12 +12,20 @@ Future real models can implement this interface and be injected through
 from typing import Protocol, List, Optional, Dict, Any, Tuple, NamedTuple
 import re, os, time
 from datetime import datetime
-from .models import Reductions, Correlation, Summaries, ActionItem
-from .llm_models import (
-    PromptAOutput, PromptBOutput, PromptCOutput,
-    ConsistencyIssue, GuardrailError, TriageFinding
-)
-from .redaction import redact_reductions
+import models
+import llm_models
+import redaction
+Reductions = models.Reductions
+Correlation = models.Correlation
+Summaries = models.Summaries
+ActionItem = models.ActionItem
+PromptAOutput = llm_models.PromptAOutput
+PromptBOutput = llm_models.PromptBOutput
+PromptCOutput = llm_models.PromptCOutput
+ConsistencyIssue = llm_models.ConsistencyIssue
+GuardrailError = llm_models.GuardrailError
+TriageFinding = llm_models.TriageFinding
+redact_reductions = redaction.redact_reductions
 
 
 class ProviderMetadata(NamedTuple):
@@ -265,8 +273,8 @@ class NullLLMProvider:
         # Optional secondary LLM refinement layer (delegated to rule_refiner)
         if os.environ.get('AGENT_RULE_REFINER_USE_LLM') == '1':  # pragma: no cover - optional path
             try:
-                from .rule_refiner import llm_refine  # lazy import
-                refined = llm_refine(refined, examples or {})
+                import rule_refiner
+                refined = rule_refiner.llm_refine(refined, examples or {})
             except Exception:
                 pass
         
@@ -293,7 +301,7 @@ def _maybe_init_from_env():  # lazy to avoid hard deps unless requested
     prov = os.environ.get('AGENT_LLM_PROVIDER','null').lower()
     if prov in {'langchain','openai','lc'}:
         try:
-            from .providers.langchain_provider import LangChainLLMProvider
+            from providers.langchain_provider import LangChainLLMProvider
             _PROVIDER = LangChainLLMProvider()
         except Exception:
             _PROVIDER = NullLLMProvider()
