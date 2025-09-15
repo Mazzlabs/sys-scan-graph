@@ -5,18 +5,22 @@ License text copyright (c) 2017 MariaDB Corporation Ab, All Rights Reserved.
 
 Parameters
 
-Licensor: Mazzlabs
-Licensed Work: Sys-Scan-Graph Intelligence Layer
-The Licensed Work is (c) 2024 Mazzlabs
-
-Additional Use Grant: None
-
-Change Date: 2028-01-01
-
-Change License: Apache License 2.0
+Licensor:             Joseph Mazzini
+Licensed Work:        sys-scan-graph Intelligence Layer (agent/)
+                       The Licensed Work is (c) 2024 Joseph Mazzini
+Additional Use Grant: You may make use of the Licensed Work, provided that you do
+                       not use the Licensed Work for a SaaS/hosted offering, production
+                       use, or commercial redistribution without a commercial agreement
+                       with Joseph Mazzini. You may use the Licensed Work for:
+                       - Non-production internal evaluation and testing
+                       - Academic research and educational purposes
+                       - Contribution via pull requests to the project
+                       - Personal use and development
+Change Date:          2028-01-01
+Change License:       Apache License, Version 2.0
 
 For information about alternative licensing arrangements for the Licensed Work,
-please contact <Joseph@Mazzlabs.works>
+please contact: Joseph@Mazzlabs.works
 
 Notice
 
