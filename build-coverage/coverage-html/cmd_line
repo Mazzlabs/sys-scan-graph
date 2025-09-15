@@ -1,1 +1,0 @@
-genhtml coverage.info --output-directory coverage-html --title 'Sys-Scan Code Coverage Report' --legend --show-details

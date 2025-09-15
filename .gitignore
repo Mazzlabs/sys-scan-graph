@@ -95,6 +95,9 @@ Thumbs.db
 coverage.xml
 *.lcov
 
+# Build coverage directory (contains HTML reports)
+/build-coverage/
+
 # Logs
 *.log
 logs/
