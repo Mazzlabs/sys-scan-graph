@@ -142,6 +142,7 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
+obj-*
 
 # PyInstaller
 *.manifest
