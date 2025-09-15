@@ -79,6 +79,7 @@ struct Config {
     std::vector<std::string> compliance_standards; // subset selection (empty=all registered)
     bool fast_scan = false;        // skip heavy scanners (modules, integrity, ebpf) for quick triage
     bool timings = false;          // include per-scanner timing metrics in output meta
+    std::string test_root = "";    // root directory for testing (allows overriding system paths)
 };
 
 Config& config();

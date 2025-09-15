@@ -181,6 +181,9 @@ static inline const char* find_unit_value(const UnitDataLean* unit, const char* 
 void SystemdUnitScanner::scan(ScanContext& context){
     if(!context.config.hardening) return;
 
+    // Start scanner
+    context.report.start_scanner(name());
+
     // Use heap allocation to avoid stack overflow
     UnitDataLean* units = new (std::nothrow) UnitDataLean[MAX_SYSTEMD_UNITS_LEAN];
     ServiceBatch* service_batch = new (std::nothrow) ServiceBatch[1];
@@ -199,26 +202,33 @@ void SystemdUnitScanner::scan(ScanContext& context){
     memset(service_batch, 0, sizeof(ServiceBatch));
     memset(file_buffer, 0, 8192);
 
-    // Standard systemd directories
-    const char* systemd_dirs[] = {
-        "/etc/systemd/system",
-        "/usr/lib/systemd/system",
-        "/lib/systemd/system"
-    };
-    const int dir_count = sizeof(systemd_dirs) / sizeof(systemd_dirs[0]);
+    // Standard systemd directories (or test root)
+    std::string systemd_dirs[3];
+    if (!context.config.test_root.empty()) {
+        // Use test root for testing
+        systemd_dirs[0] = context.config.test_root + "/etc/systemd/system";
+        systemd_dirs[1] = context.config.test_root + "/usr/lib/systemd/system";
+        systemd_dirs[2] = context.config.test_root + "/lib/systemd/system";
+    } else {
+        // Use system paths for production
+        systemd_dirs[0] = "/etc/systemd/system";
+        systemd_dirs[1] = "/usr/lib/systemd/system";
+        systemd_dirs[2] = "/lib/systemd/system";
+    }
+    const int dir_count = 3;
 
     int total_units = 0;
 
     // Single-pass collection and processing
     for (int d = 0; d < dir_count && total_units < MAX_SYSTEMD_UNITS_LEAN; d++) {
-        const char* dir_path = systemd_dirs[d];
+        const std::string& dir_path = systemd_dirs[d];
 
         // Check if directory exists
         struct stat st;
-        if (stat(dir_path, &st) != 0 || !S_ISDIR(st.st_mode)) continue;
+        if (stat(dir_path.c_str(), &st) != 0 || !S_ISDIR(st.st_mode)) continue;
 
         // Collect service files
-        if (collect_service_files_batch(dir_path, service_batch) == 0) continue;
+        if (collect_service_files_batch(dir_path.c_str(), service_batch) == 0) continue;
 
         // Process each service file
         for (int f = 0; f < service_batch->file_count && total_units < MAX_SYSTEMD_UNITS_LEAN; f++) {
@@ -226,12 +236,13 @@ void SystemdUnitScanner::scan(ScanContext& context){
 
             // Build full path with bounds checking
             char full_path[MAX_PATH_LEN_LEAN];
-            size_t dir_len = strlen(dir_path);
+            const char* dir_path_cstr = dir_path.c_str();
+            size_t dir_len = strlen(dir_path_cstr);
             size_t name_len = strlen(filename);
 
             if (dir_len + 1 + name_len >= MAX_PATH_LEN_LEAN - 1) continue; // Prevent buffer overflow
 
-            memcpy(full_path, dir_path, dir_len);
+            memcpy(full_path, dir_path_cstr, dir_len);
             full_path[dir_len] = '/';
             memcpy(full_path + dir_len + 1, filename, name_len);
             full_path[dir_len + 1 + name_len] = '\0';
@@ -345,6 +356,9 @@ void SystemdUnitScanner::scan(ScanContext& context){
     delete[] units;
     delete[] service_batch;
     delete[] file_buffer;
+
+    // End scanner
+    context.report.end_scanner(name());
 }
 
 }

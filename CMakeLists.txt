@@ -378,7 +378,39 @@ if(BUILD_TESTS)
   target_link_libraries(test_scanner_registry PRIVATE sys_scan_core GTest::gtest_main GTest::gmock)
   add_test(NAME scanner_registry COMMAND test_scanner_registry)
   
-  add_executable(test_rule_engine tests/test_rule_engine.cpp)
+  add_executable(test_integrity_scanner tests/test_integrity_scanner.cpp)
+  target_link_libraries(test_integrity_scanner PRIVATE sys_scan_core GTest::gtest_main GTest::gmock)
+  add_test(NAME integrity_scanner COMMAND test_integrity_scanner)
+  
+  add_executable(test_yara_scanner tests/test_yara_scanner.cpp)
+  target_link_libraries(test_yara_scanner PRIVATE sys_scan_core GTest::gtest_main GTest::gmock)
+  add_test(NAME yara_scanner COMMAND test_yara_scanner)
+  
+  add_executable(test_module_utils tests/test_module_utils.cpp)
+  target_link_libraries(test_module_utils PRIVATE sys_scan_core GTest::gtest_main GTest::gmock)
+  add_test(NAME module_utils COMMAND test_module_utils)
+  
+  add_executable(test_systemd_unit_scanner tests/test_systemd_unit_scanner.cpp)
+  target_link_libraries(test_systemd_unit_scanner PRIVATE sys_scan_core GTest::gtest_main GTest::gmock)
+  add_test(NAME systemd_unit_scanner COMMAND test_systemd_unit_scanner)
+  
+add_executable(test_mount_scanner tests/test_mount_scanner.cpp)
+target_link_libraries(test_mount_scanner PRIVATE sys_scan_core GTest::gtest_main GTest::gmock)
+add_test(NAME mount_scanner COMMAND test_mount_scanner)
+
+add_executable(test_kernel_hardening_scanner tests/test_kernel_hardening_scanner.cpp)
+target_link_libraries(test_kernel_hardening_scanner PRIVATE sys_scan_core GTest::gtest_main GTest::gmock)
+add_test(NAME kernel_hardening_scanner COMMAND test_kernel_hardening_scanner)
+
+add_executable(test_container_scanner tests/test_container_scanner.cpp)
+target_link_libraries(test_container_scanner PRIVATE sys_scan_core GTest::gtest_main GTest::gmock)
+add_test(NAME container_scanner COMMAND test_container_scanner)
+
+add_executable(test_suid_scanner tests/test_suid_scanner.cpp)
+target_link_libraries(test_suid_scanner PRIVATE sys_scan_core GTest::gtest_main GTest::gmock)
+add_test(NAME suid_scanner COMMAND test_suid_scanner)
+
+add_executable(test_rule_engine tests/test_rule_engine.cpp)
   target_link_libraries(test_rule_engine PRIVATE sys_scan_core GTest::gtest_main GTest::gmock)
   add_test(NAME rule_engine COMMAND test_rule_engine)
 endif()

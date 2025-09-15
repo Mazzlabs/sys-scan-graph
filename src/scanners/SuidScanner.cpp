@@ -224,8 +224,28 @@ static bool is_expected_path_lean(const char* path) {
 }
 
 void SuidScanner::scan(ScanContext& context) {
-    const char* roots[] = {"/bin", "/sbin", "/usr/bin", "/usr/sbin", "/usr/local/bin", "/usr/local/sbin"};
-    const size_t num_roots = sizeof(roots) / sizeof(roots[0]);
+    const auto& cfg = context.config;
+    if (!cfg.suid) return;
+
+    // Start scanner
+    context.report.start_scanner(name());
+
+    // Define scan roots, respecting test_root if set
+    std::vector<std::string> roots;
+    const char* default_roots[] = {"/bin", "/sbin", "/usr/bin", "/usr/sbin", "/usr/local/bin", "/usr/local/sbin"};
+    const size_t num_default_roots = sizeof(default_roots) / sizeof(default_roots[0]);
+
+    if (!cfg.test_root.empty()) {
+        // Use test_root paths
+        for (size_t i = 0; i < num_default_roots; i++) {
+            roots.push_back(cfg.test_root + default_roots[i]);
+        }
+    } else {
+        // Use system paths
+        for (size_t i = 0; i < num_default_roots; i++) {
+            roots.push_back(default_roots[i]);
+        }
+    }
 
     // Use heap allocation to avoid stack overflow
     SuidFileLean* suid_files = new (std::nothrow) SuidFileLean[MAX_SUID_FILES_LEAN];
@@ -248,8 +268,9 @@ void SuidScanner::scan(ScanContext& context) {
     int total_suid_count = 0;
 
     // Single-pass collection from all roots
-    for (size_t i = 0; i < num_roots && total_suid_count < MAX_SUID_FILES_LEAN; i++) {
-        int count = collect_suid_files_batch(roots[i], suid_files, dir_stack, filenames, MAX_SUID_FILES_LEAN - total_suid_count);
+    for (const auto& root : roots) {
+        if (total_suid_count >= MAX_SUID_FILES_LEAN) break;
+        int count = collect_suid_files_batch(root.c_str(), suid_files, dir_stack, filenames, MAX_SUID_FILES_LEAN - total_suid_count);
         total_suid_count += count;
     }
 
@@ -283,6 +304,9 @@ void SuidScanner::scan(ScanContext& context) {
     delete[] suid_files;
     delete[] dir_stack;
     delete[] filenames;
+
+    // End scanner
+    context.report.end_scanner(name());
 }
 
 }

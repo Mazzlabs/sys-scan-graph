@@ -375,7 +375,7 @@ static size_t build_inode_map_lean(char inode_map[MAX_SOCKETS_LEAN][MAX_INODE_LE
             while (count < max_entries && (fd_entry = readdir(fd_dir)) != nullptr) {
                 if (fd_entry->d_name[0] == '.') continue;
 
-                char fd_link_path[128];  // Increased from 64 for better path handling
+                char fd_link_path[512];  // Increased from 128 for better path handling
                 snprintf(fd_link_path, sizeof(fd_link_path), "/proc/%d/fd/%s", pid, fd_entry->d_name);
 
                 char target[128];  // Increased from 64 for better path handling

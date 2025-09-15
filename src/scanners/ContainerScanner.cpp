@@ -49,10 +49,14 @@ void ContainerScanner::scan(ScanContext& context) {
     const auto& cfg = context.config;
     if (!cfg.containers) return;
 
+    // Start scanner
+    context.report.start_scanner(name());
+
     // Map container id -> info
     std::unordered_map<std::string, ContainerInfo> cmap;
 
-    for (const auto& entry : fs::directory_iterator("/proc", fs::directory_options::skip_permission_denied)) {
+    std::string proc_path = cfg.test_root.empty() ? "/proc" : cfg.test_root + "/proc";
+    for (const auto& entry : fs::directory_iterator(proc_path, fs::directory_options::skip_permission_denied)) {
         if (!entry.is_directory()) continue;
         auto pid = entry.path().filename().string();
         if (!std::all_of(pid.begin(), pid.end(), ::isdigit)) continue;
@@ -78,7 +82,7 @@ void ContainerScanner::scan(ScanContext& context) {
                 ci.cgroup_path = line;
                 if (line.find("docker") != std::string::npos) ci.runtime = "docker";
                 else if (line.find("containerd") != std::string::npos) ci.runtime = "containerd";
-                else if (line.find("podman") != std::string::npos) ci.runtime = "podman";
+                else if (line.find("podman") != std::string::npos || line.find("libpod") != std::string::npos) ci.runtime = "podman";
                 else if (line.find("crio") != std::string::npos) ci.runtime = "crio";
                 else ci.runtime = "unknown";
                 attributed = true;
@@ -114,6 +118,9 @@ void ContainerScanner::scan(ScanContext& context) {
         f.description = "No container cgroup signatures found";
         context.report.add_finding(name(), std::move(f));
     }
+
+    // End scanner
+    context.report.end_scanner(name());
 }
 
 } // namespace sys_scan

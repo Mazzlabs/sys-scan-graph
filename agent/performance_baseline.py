@@ -137,6 +137,10 @@ def check_performance_regression(current_metrics: Dict[str, Any],
         "total_execution_time": current_metrics.get('performance_stats', {}).get('total_execution_time', 0)
     }
 
+    # Set regression_detected if any violations found
+    if results["violations"]:
+        results["regression_detected"] = True
+
     # Generate recommendations
     if results["violations"]:
         results["recommendations"].append("Performance regression detected. Consider optimizing slow nodes.")

@@ -77,7 +77,7 @@ TEST_F(PrivilegeTest, DropCapabilitiesInChildProcess) {
     if (pid == 0) {
         // Child process
         drop_capabilities(false);
-        exit(0);
+        syscall(SYS_exit, 0);
     } else {
         // Parent process
         int status;

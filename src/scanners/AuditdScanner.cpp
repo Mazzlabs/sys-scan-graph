@@ -16,11 +16,18 @@ static std::string read_all(const fs::path& p){ std::ifstream f(p); if(!f.is_ope
 void AuditdScanner::scan(ScanContext& context){
     if(!context.config.hardening) return;
 
+    // Start scanner
+    context.report.start_scanner(name());
+
     // Collect audit rules from /etc/audit/rules.d/*.rules and /etc/audit/audit.rules
     std::vector<fs::path> paths;
-    if(fs::exists("/etc/audit/audit.rules")) paths.push_back("/etc/audit/audit.rules");
-    if(fs::exists("/etc/audit/rules.d")){
-        for(auto& e : fs::directory_iterator("/etc/audit/rules.d")){
+    std::string root = context.config.test_root.empty() ? "" : context.config.test_root;
+    fs::path audit_rules = fs::path(root) / "etc/audit/audit.rules";
+    fs::path rules_dir = fs::path(root) / "etc/audit/rules.d";
+
+    if(fs::exists(audit_rules)) paths.push_back(audit_rules);
+    if(fs::exists(rules_dir)){
+        for(auto& e : fs::directory_iterator(rules_dir)){
             if(e.is_regular_file() && e.path().extension()==".rules") paths.push_back(e.path());
         }
     }
@@ -28,6 +35,7 @@ void AuditdScanner::scan(ScanContext& context){
     for(const auto& p : paths){ combined += read_all(p); combined += "\n"; }
     if(combined.empty()){
         Finding f; f.id="auditd:rules:missing"; f.title="No auditd rules detected"; f.severity=Severity::Medium; f.description="Could not read auditd rules files"; context.report.add_finding(name(), std::move(f));
+        context.report.end_scanner(name());
         return;
     }
 
@@ -60,6 +68,9 @@ void AuditdScanner::scan(ScanContext& context){
     if(!matched.count("execve")){
         Finding f; f.id="auditd:execve:absent"; f.title="Execve auditing missing"; f.severity=Severity::High; f.description="Audit rules lack -S execve; process execution coverage incomplete"; context.report.add_finding(name(), std::move(f));
     }
+
+    // End scanner
+    context.report.end_scanner(name());
 }
 
 }
