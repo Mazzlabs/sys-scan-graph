@@ -46,6 +46,147 @@ static Severity escalate_exposed_lean(Severity current, const char* state, const
 // Fanout aggregation struct
 struct FanoutAgg { size_t total=0; std::unordered_set<std::string> remote_ips; unsigned privileged_listen=0; unsigned wildcard_listen=0; };
 
+// Parse and validate line tokens from /proc/net/* files
+static bool parse_net_line_tokens(const char* line, char* tokens[], int max_tokens, bool is_tcp) {
+    // Remove trailing newline
+    size_t len = strlen(line);
+    if (len > 0 && line[len-1] == '\n') {
+        ((char*)line)[len-1] = '\0';
+        len--;
+    }
+    if (len == 0) return false;
+
+    // Quick filter for colon
+    if (!strchr(line, ':')) return false;
+
+    // Tokenize line (space/tab separated, thread-safe)
+    int token_count = 0;
+    char* saveptr;
+    char* tok = strtok_r((char*)line, " \t", &saveptr);
+    while (tok && token_count < max_tokens) {
+        tokens[token_count++] = tok;
+        tok = strtok_r(nullptr, " \t", &saveptr);
+    }
+
+    return token_count >= (is_tcp ? 10 : 9);
+}
+
+// Extract addresses and ports from tokenized line
+static bool extract_address_port_info(char* tokens[], bool is_tcp, unsigned& lport, unsigned& rport, char*& local, char*& rem) {
+    local = tokens[1];
+    rem = is_tcp ? tokens[2] : nullptr;
+
+    // Parse addresses and ports
+    char* colon1 = strchr(local, ':');
+    if (!colon1) return false;
+
+    *colon1 = '\0';
+    char* lport_hex = colon1 + 1;
+
+    char* rport_hex = nullptr;
+    if (is_tcp && rem) {
+        char* colon2 = strchr(rem, ':');
+        if (!colon2) return false;
+        *colon2 = '\0';
+        rport_hex = colon2 + 1;
+    }
+
+    // Convert hex ports to decimal
+    lport = strtoul(lport_hex, nullptr, 16);
+    rport = is_tcp && rport_hex ? strtoul(rport_hex, nullptr, 16) : 0;
+
+    return lport != 0 && (!is_tcp || rport != 0);
+}
+
+// Convert IP addresses from hex to string format
+static void convert_ip_addresses(const char* local, const char* rem, bool is_ipv6, bool is_tcp,
+                               char* lip, size_t lip_size, char* rip, size_t rip_size) {
+    if (is_ipv6) {
+        hex_ip6_to_str_lean(local, lip, lip_size);
+        if (is_tcp && rem) hex_ip6_to_str_lean(rem, rip, rip_size);
+    } else {
+        hex_ip_to_v4_lean(local, lip, lip_size);
+        if (is_tcp && rem) hex_ip_to_v4_lean(rem, rip, rip_size);
+    }
+}
+
+// Check if socket should be filtered based on configuration
+static bool should_filter_socket(bool is_tcp, const char* state_str, const Config& config,
+                               const char* lip, const char* container_id) {
+    if (is_tcp) {
+        if (config.network_listen_only && strcmp(state_str, "LISTEN") != 0) return true;
+        if (!state_allowed_lean(state_str, config)) return true;
+    }
+
+    // Container filtering
+    if (config.containers && !config.container_id_filter.empty()) {
+        if (!container_id || strcmp(container_id, config.container_id_filter.c_str()) != 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+// Create finding from parsed socket information
+static void create_socket_finding(Report& report, const char* proto, bool is_tcp, const char* state_str,
+                                unsigned lport, unsigned rport, const char* lip, const char* rip,
+                                const char* inode_s, const char* pid_str, const char* exe_str,
+                                const char* container_id, const Config& config) {
+    Finding f;
+    char id_buf[64];
+    snprintf(id_buf, sizeof(id_buf), "%s:%u:%s", proto, lport, inode_s);
+    f.id = id_buf;
+
+    char title_buf[64];
+    if (is_tcp) {
+        snprintf(title_buf, sizeof(title_buf), "%s %s %u", proto, state_str, lport);
+    } else {
+        snprintf(title_buf, sizeof(title_buf), "%s port %u", proto, lport);
+    }
+    f.title = title_buf;
+
+    f.severity = Severity::Info;
+    f.description = is_tcp ? "TCP socket" : "UDP socket";
+
+    f.metadata["protocol"] = is_tcp ? "tcp" : "udp";
+    if (is_tcp) f.metadata["state"] = state_str;
+    if (!config.no_user_meta) f.metadata["uid"] = "";  // Will be set from tokens if available
+    f.metadata["lport"] = std::to_string(lport);
+    if (is_tcp) f.metadata["rport"] = std::to_string(rport);
+    f.metadata["inode"] = inode_s;
+    f.metadata["lip"] = lip;
+    if (is_tcp) f.metadata["rip"] = rip;
+
+    if (pid_str && *pid_str) f.metadata["pid"] = pid_str;
+    if (exe_str && *exe_str) f.metadata["exe"] = exe_str;
+    if (container_id && *container_id) f.metadata["container_id"] = container_id;
+
+    // Severity classification
+    Severity sev;
+    if (is_tcp) {
+        sev = classify_tcp_severity_lean(state_str, lport, exe_str ? exe_str : "");
+        f.severity = escalate_exposed_lean(sev, state_str, lip);
+    } else {
+        sev = classify_udp_severity_lean(lport, exe_str ? exe_str : "");
+        f.severity = sev;
+    }
+
+    // Wildcard/privileged annotations for TCP
+    if (is_tcp && strcmp(state_str, "LISTEN") == 0) {
+        bool wildcard = false;
+        if (strstr(proto, "6")) {  // IPv6
+            wildcard = (strcmp(lip, "0000:0000:0000:0000:0000:0000:0000:0000") == 0);
+        } else {  // IPv4
+            wildcard = (strcmp(lip, "0.0.0.0") == 0);
+        }
+        if (wildcard) f.metadata["wildcard_listen"] = "true";
+        if (lport < 1024) f.metadata["privileged_port"] = "true";
+    }
+
+    report.add_finding(proto, std::move(f));
+}
+
 // Full-file line-by-line reader for /proc/net/* files (handles files larger than buffer)
 static void parse_proc_net_file(const char* path, Report& report, const char* proto,
                                const char inode_map[MAX_SOCKETS_LEAN][MAX_INODE_LEN_LEAN], const char pid_map[MAX_SOCKETS_LEAN][16],
@@ -70,155 +211,40 @@ static void parse_proc_net_file(const char* path, Report& report, const char* pr
             continue;
         }
 
-        // Remove trailing newline
-        size_t len = strlen(line);
-        if (len > 0 && line[len-1] == '\n') {
-            line[len-1] = '\0';
-            len--;
-        }
-        if (len == 0) continue;
-
-        // Quick filter for colon
-        if (!strchr(line, ':')) continue;
-
-        // Tokenize line (space/tab separated, thread-safe)
+        // Parse line tokens
         char* tokens[20];
-        int token_count = 0;
-        char* saveptr;
-        char* tok = strtok_r(line, " \t", &saveptr);
-        while (tok && token_count < 20) {
-            tokens[token_count++] = tok;
-            tok = strtok_r(nullptr, " \t", &saveptr);
-        }
+        if (!parse_net_line_tokens(line, tokens, 20, is_tcp)) continue;
 
-        if (token_count < (is_tcp ? 10 : 9)) continue;
+        // Extract address and port information
+        unsigned lport, rport;
+        char* local, *rem;
+        if (!extract_address_port_info(tokens, is_tcp, lport, rport, local, rem)) continue;
 
-        // Extract fields
-        char* local = tokens[1];
-        char* rem = is_tcp ? tokens[2] : nullptr;
-        char* st = is_tcp ? tokens[3] : nullptr;
-        char* uid_s = tokens[is_tcp ? 7 : 6];
-        char* inode_s = tokens[is_tcp ? 9 : 8];
+        const char* state_str = is_tcp ? tcp_state_lean(tokens[3]) : "UDP";
 
-        // Parse addresses and ports
-        char* colon1 = strchr(local, ':');
-        if (!colon1) continue;
-
-        *colon1 = '\0';
-        char* lport_hex = colon1 + 1;
-
-        char* rport_hex = nullptr;
-        if (is_tcp && rem) {
-            char* colon2 = strchr(rem, ':');
-            if (!colon2) continue;
-            *colon2 = '\0';
-            rport_hex = colon2 + 1;
-        }
-
-        // Convert hex ports to decimal
-        unsigned lport = strtoul(lport_hex, nullptr, 16);
-        unsigned rport = is_tcp && rport_hex ? strtoul(rport_hex, nullptr, 16) : 0;
-
-        if (lport == 0 && (!is_tcp || rport == 0)) continue;
-
-        const char* state_str = is_tcp ? tcp_state_lean(st) : "UDP";
-
-        if (is_tcp) {
-            if (config.network_listen_only && strcmp(state_str, "LISTEN") != 0) continue;
-            if (!state_allowed_lean(state_str, config)) continue;
-        }
-
-        // Convert IPs
+        // Convert IP addresses
         char lip[40] = "", rip[40] = "";
-        if (is_ipv6) {
-            hex_ip6_to_str_lean(local, lip, sizeof(lip));
-            if (is_tcp && rem) hex_ip6_to_str_lean(rem, rip, sizeof(rip));
-        } else {
-            hex_ip_to_v4_lean(local, lip, sizeof(lip));
-            if (is_tcp && rem) hex_ip_to_v4_lean(rem, rip, sizeof(rip));
-        }
-
-        // Create finding
-        Finding f;
-        char id_buf[64];
-        snprintf(id_buf, sizeof(id_buf), "%s:%u:%s", proto, lport, inode_s);
-        f.id = id_buf;
-
-        char title_buf[64];
-        if (is_tcp) {
-            snprintf(title_buf, sizeof(title_buf), "%s %s %u", proto, state_str, lport);
-        } else {
-            snprintf(title_buf, sizeof(title_buf), "%s port %u", proto, lport);
-        }
-        f.title = title_buf;
-
-        f.severity = Severity::Info;
-        f.description = is_tcp ? "TCP socket" : "UDP socket";
-
-        f.metadata["protocol"] = is_tcp ? "tcp" : "udp";
-        if (is_tcp) f.metadata["state"] = state_str;
-        if (!config.no_user_meta) f.metadata["uid"] = uid_s;
-        f.metadata["lport"] = std::to_string(lport);
-        if (is_tcp) f.metadata["rport"] = std::to_string(rport);
-        f.metadata["inode"] = inode_s;
-        f.metadata["lip"] = lip;
-        if (is_tcp) f.metadata["rip"] = rip;
+        convert_ip_addresses(local, rem, is_ipv6, is_tcp, lip, sizeof(lip), rip, sizeof(rip));
 
         // Lookup inode in lean arrays
-        size_t inode_idx = find_inode_lean(inode_map, inode_count, inode_s);
-        if (inode_idx != SIZE_MAX && inode_idx < inode_count) {
-            if (pid_map[inode_idx][0]) f.metadata["pid"] = pid_map[inode_idx];
-            if (exe_map[inode_idx][0]) f.metadata["exe"] = exe_map[inode_idx];
-            if (container_map[inode_idx][0]) f.metadata["container_id"] = container_map[inode_idx];
-        }
+        size_t inode_idx = find_inode_lean(inode_map, inode_count, tokens[is_tcp ? 9 : 8]);
+        const char* inode_s = tokens[is_tcp ? 9 : 8];
+        const char* pid_str = (inode_idx != SIZE_MAX && inode_idx < inode_count) ? pid_map[inode_idx] : "";
+        const char* exe_str = (inode_idx != SIZE_MAX && inode_idx < inode_count) ? exe_map[inode_idx] : "";
+        const char* container_id = (inode_idx != SIZE_MAX && inode_idx < inode_count) ? container_map[inode_idx] : "";
 
-        // Container filtering
-        if (config.containers && !config.container_id_filter.empty()) {
-            auto it = f.metadata.find("container_id");
-            if (it == f.metadata.end() || it->second != config.container_id_filter) continue;
-        }
+        // Check if socket should be filtered
+        if (should_filter_socket(is_tcp, state_str, config, lip, container_id)) continue;
 
-        // Severity classification
-        const char* exe_str = f.metadata.count("exe") ? f.metadata["exe"].c_str() : "";
-        Severity sev;
-        if (is_tcp) {
-            sev = classify_tcp_severity_lean(state_str, lport, exe_str);
-            f.severity = escalate_exposed_lean(sev, state_str, lip);
-        } else {
-            sev = classify_udp_severity_lean(lport, exe_str);
-            f.severity = sev;
-        }
-
-        // Wildcard/privileged annotations for TCP
-        if (is_tcp && strcmp(state_str, "LISTEN") == 0) {
-            // Check for wildcard addresses (aligned with converter output)
-            bool wildcard = false;
-            if (is_ipv6) {
-                // IPv6: check for all-zero expanded form (converter never emits "::")
-                wildcard = (strcmp(lip, "0000:0000:0000:0000:0000:0000:0000:0000") == 0);
-            } else {
-                // IPv4: check for 0.0.0.0
-                wildcard = (strcmp(lip, "0.0.0.0") == 0);
-            }
-            if (wildcard) f.metadata["wildcard_listen"] = "true";
-            if (lport < 1024) f.metadata["privileged_port"] = "true";
-        }
-
-        report.add_finding(proto, std::move(f));
+        // Create and add finding
+        create_socket_finding(report, proto, is_tcp, state_str, lport, rport, lip, rip,
+                            inode_s, pid_str, exe_str, container_id, config);
 
         // Fanout aggregation for TCP
         if (is_tcp && config.network_advanced && fanout && strcmp(state_str, "ESTABLISHED") == 0 && inode_idx != SIZE_MAX && inode_idx < inode_count) {
-            const char* pid_str = pid_map[inode_idx];
-            auto& agg = (*fanout)[pid_str];
-            agg.total++;
-
-            char remote_ip[40];
-            if (is_ipv6) {
-                hex_ip6_to_str_lean(rem, remote_ip, sizeof(remote_ip));
-            } else {
-                hex_ip_to_v4_lean(rem, remote_ip, sizeof(remote_ip));
-            }
-            agg.remote_ips.insert(remote_ip);
+            const char* remote_ip = is_ipv6 ? rip : rip;
+            (*fanout)[pid_str].total++;
+            (*fanout)[pid_str].remote_ips.insert(remote_ip);
         }
 
         ++emitted;
@@ -238,6 +264,46 @@ static bool state_allowed_lean(const char* st, const Config& config) {
 }
 
 // Ultra-fast container ID extraction (no allocations) with stricter cgroup parsing
+// Check if position has a known container runtime marker
+static bool has_container_marker(const char* ptr, const char* end, const char* const* markers, size_t marker_count) {
+    for (size_t i = 0; i < marker_count; ++i) {
+        size_t marker_len = strlen(markers[i]);
+        if (ptr + marker_len < end && strncmp(ptr, markers[i], marker_len) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Check if string of given length is all hex digits
+static bool is_valid_hex_string(const char* ptr, size_t len, const char* end) {
+    if (ptr + len > end) return false;
+    for (size_t i = 0; i < len; ++i) {
+        if (!isxdigit(ptr[i])) return false;
+    }
+    return true;
+}
+
+// Extract container ID from position if valid hex string found
+static bool extract_container_id_from_position(const char* ptr, const char* end, char* out_id, size_t out_size) {
+    // Check for 64-char hex string first (full container ID)
+    if (is_valid_hex_string(ptr, 64, end)) {
+        memcpy(out_id, ptr, 12);
+        out_id[12] = '\0';
+        return true;
+    }
+
+    // Check for 32-char hex string (short container ID)
+    if (is_valid_hex_string(ptr, 32, end)) {
+        memcpy(out_id, ptr, 12);
+        out_id[12] = '\0';
+        return true;
+    }
+
+    return false;
+}
+
+// Extract container ID from cgroup data (lean version)
 static bool extract_container_id_lean(const char* cgroup_data, size_t len, char* out_id, size_t out_size) {
     if (out_size < 13) return false;  // Need at least 12 chars + null
 
@@ -248,50 +314,20 @@ static bool extract_container_id_lean(const char* cgroup_data, size_t len, char*
     static const char* markers[] = {
         "docker-", "containerd-", "crio-", "podman-", "lxc-", "kubepods"
     };
+    static const size_t marker_count = sizeof(markers) / sizeof(markers[0]);
 
-    while (ptr < end - 32) {  // Need at least 32 chars
+    while (ptr < end - 32) {  // Need at least 32 chars for shortest valid ID
         // Check for known container runtime markers first
-        bool has_marker = false;
-        for (const char* marker : markers) {
-            size_t marker_len = strlen(marker);
-            if (ptr + marker_len < end && strncmp(ptr, marker, marker_len) == 0) {
-                has_marker = true;
-                break;
-            }
-        }
-
-        if (!has_marker && !isxdigit(*ptr)) {
+        if (!has_container_marker(ptr, end, markers, marker_count) && !isxdigit(*ptr)) {
             ++ptr;
             continue;
         }
 
-        // Check for 64-char hex string
-        bool is_64_char = true;
-        for (int i = 0; i < 64 && ptr + i < end; ++i) {
-            if (!isxdigit(ptr[i])) {
-                is_64_char = false;
-                break;
-            }
-        }
-        if (is_64_char && ptr + 64 <= end) {
-            memcpy(out_id, ptr, 12);
-            out_id[12] = '\0';
+        // Try to extract container ID from current position
+        if (extract_container_id_from_position(ptr, end, out_id, out_size)) {
             return true;
         }
 
-        // Check for 32-char hex string
-        bool is_32_char = true;
-        for (int i = 0; i < 32 && ptr + i < end; ++i) {
-            if (!isxdigit(ptr[i])) {
-                is_32_char = false;
-                break;
-            }
-        }
-        if (is_32_char && ptr + 32 <= end) {
-            memcpy(out_id, ptr, 12);
-            out_id[12] = '\0';
-            return true;
-        }
         ++ptr;
     }
     return false;
@@ -326,6 +362,112 @@ static ssize_t read_file_to_buffer(const char* path, char* buffer, size_t buffer
     return total_read;
 }
 
+// Build standard proc file paths for a given PID
+static void build_proc_paths(int pid, char* proc_path, size_t proc_size,
+                           char* cgroup_path, size_t cgroup_size,
+                           char* exe_path, size_t exe_size,
+                           char* fd_path, size_t fd_size) {
+    snprintf(proc_path, proc_size, "/proc/%d", pid);
+    snprintf(cgroup_path, cgroup_size, "/proc/%d/cgroup", pid);
+    snprintf(exe_path, exe_size, "/proc/%d/exe", pid);
+    snprintf(fd_path, fd_size, "/proc/%d/fd", pid);
+}
+
+// Read container ID from cgroup file
+static bool read_container_id(int pid, const Config& config, char* container_id, size_t container_size) {
+    if (!config.containers || container_size < 13) return false;
+
+    char cgroup_path[128];
+    char cgroup_data[2048];
+
+    build_proc_paths(pid, nullptr, 0, cgroup_path, sizeof(cgroup_path), nullptr, 0, nullptr, 0);
+
+    ssize_t len = read_file_to_buffer(cgroup_path, cgroup_data, sizeof(cgroup_data) - 1);
+    if (len > 0) {
+        cgroup_data[len] = '\0';
+        return extract_container_id_lean(cgroup_data, len, container_id, container_size);
+    }
+    return false;
+}
+
+// Read executable path from /proc/[pid]/exe symlink
+static bool read_exe_path(int pid, char* exe_buf, size_t exe_size) {
+    char exe_path[128];
+    build_proc_paths(pid, nullptr, 0, nullptr, 0, exe_path, sizeof(exe_path), nullptr, 0);
+
+    ssize_t exe_len = readlink(exe_path, exe_buf, exe_size - 1);
+    if (exe_len > 0) {
+        exe_buf[exe_len] = '\0';
+        return true;
+    }
+    exe_buf[0] = '\0';
+    return false;
+}
+
+// Process socket file descriptors for a given PID
+static size_t process_socket_fds(int pid, const char* exe_buf, const char* container_id,
+                                char inode_map[MAX_SOCKETS_LEAN][MAX_INODE_LEN_LEAN],
+                                char pid_map[MAX_SOCKETS_LEAN][16],
+                                char exe_map[MAX_SOCKETS_LEAN][MAX_PATH_LEN_LEAN],
+                                char container_map[MAX_SOCKETS_LEAN][13],
+                                size_t start_count, size_t max_entries) {
+    char fd_path[128];
+    build_proc_paths(pid, nullptr, 0, nullptr, 0, nullptr, 0, fd_path, sizeof(fd_path));
+
+    DIR* fd_dir = opendir(fd_path);
+    if (!fd_dir) return start_count;
+
+    size_t count = start_count;
+    struct dirent* fd_entry;
+
+    while (count < max_entries && (fd_entry = readdir(fd_dir)) != nullptr) {
+        if (fd_entry->d_name[0] == '.') continue;
+
+        char fd_link_path[512];
+        snprintf(fd_link_path, sizeof(fd_link_path), "/proc/%d/fd/%s", pid, fd_entry->d_name);
+
+        char target[128];
+        ssize_t target_len = readlink(fd_link_path, target, sizeof(target) - 1);
+        if (target_len <= 0) continue;
+
+        target[target_len] = '\0';
+
+        // Check if it's a socket and extract inode
+        const char* socket_prefix = "socket:[";
+        if (strncmp(target, socket_prefix, strlen(socket_prefix)) != 0) continue;
+
+        const char* bracket_start = strchr(target, '[');
+        const char* bracket_end = strchr(target, ']');
+        if (!bracket_start || !bracket_end || bracket_start >= bracket_end) continue;
+
+        size_t inode_len = bracket_end - bracket_start - 1;
+        if (inode_len >= sizeof(inode_map[0]) - 1) continue;
+
+        // Store inode and associated data
+        memcpy(inode_map[count], bracket_start + 1, inode_len);
+        inode_map[count][inode_len] = '\0';
+
+        snprintf(pid_map[count], sizeof(pid_map[0]), "%d", pid);
+
+        if (exe_buf && *exe_buf && strlen(exe_buf) < sizeof(exe_map[0])) {
+            memcpy(exe_map[count], exe_buf, strlen(exe_buf) + 1);
+        } else {
+            exe_map[count][0] = '\0';
+        }
+
+        if (container_id && *container_id && strlen(container_id) < sizeof(container_map[0])) {
+            memcpy(container_map[count], container_id, strlen(container_id) + 1);
+        } else {
+            container_map[count][0] = '\0';
+        }
+
+        count++;
+    }
+
+    closedir(fd_dir);
+    return count;
+}
+
 // Ultra-fast inode map building (lean version)
 static size_t build_inode_map_lean(char inode_map[MAX_SOCKETS_LEAN][MAX_INODE_LEN_LEAN], char pid_map[MAX_SOCKETS_LEAN][16], char exe_map[MAX_SOCKETS_LEAN][MAX_PATH_LEN_LEAN], char container_map[MAX_SOCKETS_LEAN][13], size_t max_entries, const Config& config) {
     DIR* dir = opendir("/proc");
@@ -333,90 +475,24 @@ static size_t build_inode_map_lean(char inode_map[MAX_SOCKETS_LEAN][MAX_INODE_LE
 
     size_t count = 0;
     struct dirent* entry;
+
     while (count < max_entries && (entry = readdir(dir)) != nullptr) {
         if (entry->d_name[0] == '.') continue;
+
         int pid;
         if (!is_valid_pid(entry->d_name, &pid)) continue;
 
-        // Build paths
-        char proc_path[128];  // Increased from 64 for better path handling
-        char cgroup_path[128];  // Increased from 64 for better path handling
-        char exe_path[128];  // Increased from 64 for better path handling
-        char fd_path[128];  // Increased from 64 for better path handling
-        snprintf(proc_path, sizeof(proc_path), "/proc/%d", pid);
-        snprintf(cgroup_path, sizeof(cgroup_path), "/proc/%d/cgroup", pid);
-        snprintf(exe_path, sizeof(exe_path), "/proc/%d/exe", pid);
-        snprintf(fd_path, sizeof(fd_path), "/proc/%d/fd", pid);
-
-        // Read container ID if containers enabled
+        // Read container ID and exe path
         char container_id[13] = "";
-        if (config.containers) {
-            char cgroup_data[2048];
-            ssize_t len = read_file_to_buffer(cgroup_path, cgroup_data, sizeof(cgroup_data) - 1);
-            if (len > 0) {
-                cgroup_data[len] = '\0';
-                extract_container_id_lean(cgroup_data, len, container_id, sizeof(container_id));
-            }
-        }
+        char exe_buf[512] = "";
 
-        // Read exe symlink
-        char exe_buf[512];  // Increased from 256 for better path handling
-        ssize_t exe_len = readlink(exe_path, exe_buf, sizeof(exe_buf) - 1);
-        if (exe_len > 0) {
-            exe_buf[exe_len] = '\0';
-        } else {
-            exe_buf[0] = '\0';
-        }
+        read_container_id(pid, config, container_id, sizeof(container_id));
+        read_exe_path(pid, exe_buf, sizeof(exe_buf));
 
-        // Process fd directory
-        DIR* fd_dir = opendir(fd_path);
-        if (fd_dir) {
-            struct dirent* fd_entry;
-            while (count < max_entries && (fd_entry = readdir(fd_dir)) != nullptr) {
-                if (fd_entry->d_name[0] == '.') continue;
-
-                char fd_link_path[512];  // Increased from 128 for better path handling
-                snprintf(fd_link_path, sizeof(fd_link_path), "/proc/%d/fd/%s", pid, fd_entry->d_name);
-
-                char target[128];  // Increased from 64 for better path handling
-                ssize_t target_len = readlink(fd_link_path, target, sizeof(target) - 1);
-                if (target_len <= 0) continue;
-
-                target[target_len] = '\0';
-
-                // Check if it's a socket
-                const char* socket_prefix = "socket:[";
-                if (strncmp(target, socket_prefix, strlen(socket_prefix)) != 0) continue;
-
-                // Extract inode number
-                const char* bracket_start = strchr(target, '[');
-                const char* bracket_end = strchr(target, ']');
-                if (!bracket_start || !bracket_end || bracket_start >= bracket_end) continue;
-
-                size_t inode_len = bracket_end - bracket_start - 1;
-                if (inode_len >= sizeof(inode_map[0]) - 1) continue;  // Leave room for null terminator
-
-                memcpy(inode_map[count], bracket_start + 1, inode_len);
-                inode_map[count][inode_len] = '\0';
-
-                // Store associated data
-                snprintf(pid_map[count], sizeof(pid_map[0]), "%d", pid);
-                if (exe_len > 0 && exe_len < sizeof(exe_map[0])) {
-                    memcpy(exe_map[count], exe_buf, exe_len + 1);
-                } else {
-                    exe_map[count][0] = '\0';
-                }
-                if (container_id[0] && strlen(container_id) < sizeof(container_map[0])) {
-                    memcpy(container_map[count], container_id, strlen(container_id) + 1);
-                } else {
-                    container_map[count][0] = '\0';
-                }
-
-                count++;
-            }
-            closedir(fd_dir);
-        }
+        // Process socket file descriptors
+        count = process_socket_fds(pid, exe_buf, container_id, inode_map, pid_map, exe_map, container_map, count, max_entries);
     }
+
     closedir(dir);
     return count;
 }
@@ -473,18 +549,32 @@ static const char* tcp_state_lean(const char* st) {
 }
 
 // Ultra-fast severity classification
+// Check if TCP port is considered sensitive
+static bool is_sensitive_tcp_port(unsigned port) {
+    return port == 22 || port == 23 || port == 2323;
+}
+
+// Check if TCP port is a common service
+static bool is_common_service_port(unsigned port) {
+    return port == 80 || port == 443 || port == 53 || port == 25 ||
+           port == 110 || port == 995 || port == 143 || port == 993;
+}
+
+// Classify severity for TCP ports in LISTEN state
+static Severity classify_listen_port_severity(unsigned port) {
+    if (is_sensitive_tcp_port(port)) return Severity::Medium;
+    if (port == 0) return Severity::Low;
+    if (port < 1024) {
+        if (is_common_service_port(port)) return Severity::Low;
+        return Severity::Medium;
+    }
+    return Severity::Info;
+}
+
+// Ultra-fast severity classification for TCP
 static Severity classify_tcp_severity_lean(const char* state, unsigned port, const char* exe) {
     if (strcmp(state, "LISTEN") == 0) {
-        if (port == 22 || port == 23 || port == 2323) return Severity::Medium;
-        if (port == 0) return Severity::Low;
-        if (port < 1024) {
-            // Common services
-            if (port == 80 || port == 443 || port == 53 || port == 25 ||
-                port == 110 || port == 995 || port == 143 || port == 993) {
-                return Severity::Low;
-            }
-            return Severity::Medium;
-        }
+        return classify_listen_port_severity(port);
     }
     return Severity::Info;
 }

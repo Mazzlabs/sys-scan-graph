@@ -142,92 +142,244 @@ struct ModuleScanData {
     }
 };
 
-void ModuleScanner::scan(ScanContext& context) {
-    ModuleScanData data;
-    auto& cfg = context.config;
+// Forward declarations for extracted functions
+void setup_scan_paths(const std::string& kernel_release, std::string& modules_dep_path,
+                     std::string& modules_builtin_path, std::string& lib_modules_base);
+void build_module_path_map(const std::string& modules_dep_path, ModuleScanData& data);
+void build_builtin_modules_set(const std::string& modules_builtin_path, ModuleScanData& data);
+void collect_sysfs_modules(ModuleScanData& data);
+bool read_proc_modules(std::vector<std::string>& proc_lines);
+void handle_simple_mode(ScanContext& context, const std::vector<std::string>& proc_lines);
+void process_modules_detailed(ScanContext& context, ModuleScanData& data,
+                            const std::vector<std::string>& proc_lines,
+                            const std::string& lib_modules_base);
+void build_summary_finding(ScanContext& context, const std::string& scanner_name, const ModuleScanData& data,
+                          size_t total, size_t likely_out_of_tree, size_t unsigned_count,
+                          size_t compressed_count, size_t compressed_scanned, size_t compressed_unsigned,
+                          size_t missing_file_count, size_t hidden_in_proc_only_count,
+                          size_t sysfs_only_count, size_t wx_section_modules,
+                          size_t large_text_section_modules, size_t suspicious_name_section_modules);
+bool is_out_of_tree_module(const std::string& path);
+void analyze_module_signature(const std::string& path, const std::string& full_path,
+                            bool& unsigned_mod, bool& missing_file, ScanContext& context);
+void detect_hidden_module(const std::string& name, const ModuleScanData& data, bool& hidden_proc_only);
+void process_module_anomalies(ScanContext& context, const std::string& name, const std::string& path,
+                            const std::string& full_path, bool oot, bool unsigned_mod,
+                            bool missing_file, bool hidden_proc_only, ModuleScanData& data,
+                            size_t& wx_section_modules, size_t& large_text_section_modules,
+                            size_t& suspicious_name_section_modules);
 
-    // Get kernel release
-    struct utsname un {};
-    if (uname(&un) != 0) return;
-    std::string rel = un.release;
+void setup_scan_paths(const std::string& kernel_release, std::string& modules_dep_path,
+                     std::string& modules_builtin_path, std::string& lib_modules_base) {
+    modules_dep_path = "/lib/modules/" + kernel_release + "/modules.dep";
+    modules_builtin_path = "/lib/modules/" + kernel_release + "/modules.builtin";
+    lib_modules_base = "/lib/modules/" + kernel_release + "/";
+}
 
-    // Build paths once
-    std::string modules_dep_path = "/lib/modules/" + rel + "/modules.dep";
-    std::string modules_builtin_path = "/lib/modules/" + rel + "/modules.builtin";
-    std::string lib_modules_base = "/lib/modules/" + rel + "/";
+void build_module_path_map(const std::string& modules_dep_path, ModuleScanData& data) {
+    std::vector<std::string> dep_lines;
+    if (read_lines_posix(modules_dep_path.c_str(), dep_lines)) {
+        for (auto& line : dep_lines) {
+            if (line.empty()) continue;
+            size_t colon = line.find(':');
+            if (colon == std::string::npos) continue;
 
-    if (!cfg.modules_summary_only && !cfg.modules_anomalies_only) {
-        // Simple mode: just list modules
-        std::vector<std::string> proc_lines;
-        if (read_lines_posix("/proc/modules", proc_lines)) {
-            for (const auto& line : proc_lines) {
-                std::string name;
-                if (parse_module_line(line, name)) {
-                    Finding f;
-                    f.id = std::move(name);
-                    f.title = "Module " + f.id;
-                    f.severity = Severity::Info;
-                    f.description = "Loaded kernel module";
-                    context.report.add_finding(this->name(), std::move(f));
+            std::string path = line.substr(0, colon);
+            size_t slash = path.find_last_of('/');
+            std::string fname = (slash == std::string::npos) ? path : path.substr(slash + 1);
+            std::string base = strip_extension(std::move(fname));
+
+            data.name_to_path[std::move(base)] = std::move(path);
+        }
+    }
+}
+
+void build_builtin_modules_set(const std::string& modules_builtin_path, ModuleScanData& data) {
+    std::vector<std::string> builtin_lines;
+    if (read_lines_posix(modules_builtin_path.c_str(), builtin_lines)) {
+        for (auto& line : builtin_lines) {
+            if (line.empty()) continue;
+            size_t slash = line.find_last_of('/');
+            std::string fname = (slash == std::string::npos) ? line : line.substr(slash + 1);
+            std::string base = strip_extension(std::move(fname));
+            data.builtin_modules.insert(std::move(base));
+        }
+    }
+}
+
+void collect_sysfs_modules(ModuleScanData& data) {
+    DIR* dir = opendir("/sys/module");
+    if (dir) {
+        struct dirent* entry;
+        while ((entry = readdir(dir)) != nullptr) {
+            if (entry->d_type == DT_DIR && strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
+                data.sysfs_modules.insert(entry->d_name);
+            }
+        }
+        closedir(dir);
+    }
+}
+
+bool read_proc_modules(std::vector<std::string>& proc_lines) {
+    return read_lines_posix("/proc/modules", proc_lines);
+}
+
+void handle_simple_mode(ScanContext& context, const std::string& scanner_name, const std::vector<std::string>& proc_lines) {
+    for (const auto& line : proc_lines) {
+        std::string name;
+        if (parse_module_line(line, name)) {
+            Finding f;
+            f.id = std::move(name);
+            f.title = "Module " + f.id;
+            f.severity = Severity::Info;
+            f.description = "Loaded kernel module";
+            context.report.add_finding(scanner_name, std::move(f));
+        }
+    }
+}
+
+bool is_out_of_tree_module(const std::string& path) {
+    return path.find("/extra/") != std::string::npos ||
+           path.find("/updates/") != std::string::npos ||
+           path.find("dkms") != std::string::npos ||
+           path.find("nvidia") != std::string::npos ||
+           path.find("virtualbox") != std::string::npos ||
+           path.find("vmware") != std::string::npos;
+}
+
+void analyze_module_signature(const std::string& path, const std::string& full_path,
+                            bool& unsigned_mod, bool& missing_file, const std::string& scanner_name,
+                            ScanContext& context) {
+    unsigned_mod = false;
+    missing_file = false;
+
+    if (path.size() >= 3 && memcmp(path.data() + path.size() - 3, ".ko", 3) == 0) {
+        // Uncompressed module
+        unsigned_mod = SignatureAnalyzer::is_unsigned_module(full_path);
+    } else if (CompressionUtils::is_compressed(path)) {
+        std::string contents;
+        if (path.size() >= 6 && memcmp(path.data() + path.size() - 6, ".ko.xz", 6) == 0) {
+            contents = CompressionUtils::decompress_xz_bounded(full_path);
+        } else {
+            contents = CompressionUtils::decompress_gz_bounded(full_path);
+        }
+
+        if (contents.empty()) {
+            context.report.add_warning(scanner_name, WarnCode::DecompressFail, path);
+        } else {
+            if (contents.find("Module signature appended") == std::string::npos) {
+                unsigned_mod = true;
+            }
+        }
+    }
+
+    // File existence check using stat for better performance
+    struct stat st;
+    if (stat(full_path.c_str(), &st) != 0) {
+        missing_file = true;
+    }
+}
+
+void detect_hidden_module(const std::string& name, const ModuleScanData& data, bool& hidden_proc_only) {
+    hidden_proc_only = (data.sysfs_modules.find(name) == data.sysfs_modules.end() &&
+                       data.builtin_modules.find(name) == data.builtin_modules.end());
+}
+
+void process_module_anomalies(ScanContext& context, const std::string& scanner_name, const std::string& name, const std::string& path,
+                            const std::string& full_path, bool oot, bool unsigned_mod,
+                            bool missing_file, bool hidden_proc_only, ModuleScanData& data,
+                            size_t& wx_section_modules, size_t& large_text_section_modules,
+                            size_t& suspicious_name_section_modules) {
+    if (!oot && !unsigned_mod && !missing_file && !hidden_proc_only) {
+        return; // No anomalies to report
+    }
+
+    Finding f;
+    f.id = name;
+    f.title = "Module anomaly: " + name;
+    f.severity = Severity::Medium;
+    f.description = "Kernel module anomaly";
+
+    if (unsigned_mod) {
+        f.metadata["unsigned"] = "true";
+        f.severity = Severity::High;
+        f.description = "Unsigned kernel module detected";
+    }
+    if (oot) {
+        f.metadata["out_of_tree"] = "true";
+        if (f.severity < Severity::High) f.severity = Severity::High;
+        f.description = "Out-of-tree kernel module";
+    }
+    if (missing_file) {
+        f.metadata["missing_file"] = "true";
+        f.severity = Severity::High;
+        f.description = "Module file missing on disk";
+    }
+    if (hidden_proc_only) {
+        f.metadata["hidden_sysfs"] = "true";
+        f.severity = Severity::High;
+        f.description = "Module present in /proc/modules but missing in /sys/module";
+    }
+
+    // ELF section heuristics (only if file exists)
+    if (!full_path.empty() && !missing_file) {
+        auto sections = ElfModuleHeuristics::parse_sections(full_path);
+        if (!sections.empty()) {
+            if (ElfModuleHeuristics::has_wx_section(sections)) {
+                f.metadata["wx_section"] = "true";
+                if (f.severity < Severity::High) f.severity = Severity::High;
+                ++wx_section_modules;
+                if (data.wx_section_sample.size() < WX_SECTION_SAMPLE_LIMIT) {
+                    data.wx_section_sample.push_back(name);
+                }
+            }
+            if (ElfModuleHeuristics::has_large_text_section(sections)) {
+                uint64_t text_size = 0;
+                for (const auto& s : sections) {
+                    if (s.name == ".text") {
+                        text_size = s.size;
+                        break;
+                    }
+                }
+                f.metadata["large_text_section"] = std::to_string(text_size);
+                if (f.severity < Severity::High) f.severity = Severity::High;
+                ++large_text_section_modules;
+                if (data.large_text_section_sample.size() < LARGE_TEXT_SAMPLE_LIMIT) {
+                    data.large_text_section_sample.push_back(name);
+                }
+            }
+            if (ElfModuleHeuristics::has_suspicious_section_name(sections)) {
+                for (const auto& s : sections) {
+                    if (ElfModuleHeuristics::has_suspicious_section_name({s})) {
+                        f.metadata["suspicious_section_name"] = s.name;
+                        if (f.severity < Severity::High) f.severity = Severity::High;
+                        ++suspicious_name_section_modules;
+                        if (data.suspicious_section_name_sample.size() < SUSPICIOUS_SECTION_SAMPLE_LIMIT) {
+                            data.suspicious_section_name_sample.push_back(name);
+                        }
+                        break;
+                    }
                 }
             }
         }
-        return;
     }
 
-    // Summary/anomalies mode: gather detailed stats
-
-    // Build module name->path map from modules.dep (optimized)
-    {
-        std::vector<std::string> dep_lines;
-        if (read_lines_posix(modules_dep_path.c_str(), dep_lines)) {
-            for (auto& line : dep_lines) {
-                if (line.empty()) continue;
-                size_t colon = line.find(':');
-                if (colon == std::string::npos) continue;
-
-                std::string path = line.substr(0, colon);
-                size_t slash = path.find_last_of('/');
-                std::string fname = (slash == std::string::npos) ? path : path.substr(slash + 1);
-                std::string base = strip_extension(std::move(fname));
-
-                data.name_to_path[std::move(base)] = std::move(path);
-            }
+#ifdef SYS_SCAN_HAVE_OPENSSL
+    if (context.config.modules_hash && !full_path.empty() && !missing_file) {
+        std::string hash = SignatureAnalyzer::compute_sha256(full_path);
+        if (!hash.empty()) {
+            f.metadata["sha256"] = hash;
         }
     }
+#endif
 
-    // Prepare built-in module name set (optimized)
-    {
-        std::vector<std::string> builtin_lines;
-        if (read_lines_posix(modules_builtin_path.c_str(), builtin_lines)) {
-            for (auto& line : builtin_lines) {
-                if (line.empty()) continue;
-                size_t slash = line.find_last_of('/');
-                std::string fname = (slash == std::string::npos) ? line : line.substr(slash + 1);
-                std::string base = strip_extension(std::move(fname));
-                data.builtin_modules.insert(std::move(base));
-            }
-        }
-    }
+    if (!path.empty()) f.metadata["path"] = path;
+    context.report.add_finding(scanner_name, std::move(f));
+}
 
-    // Collect sysfs module directory names (optimized)
-    {
-        DIR* dir = opendir("/sys/module");
-        if (dir) {
-            struct dirent* entry;
-            while ((entry = readdir(dir)) != nullptr) {
-                if (entry->d_type == DT_DIR && strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
-                    data.sysfs_modules.insert(entry->d_name);
-                }
-            }
-            closedir(dir);
-        }
-    }
-
-    // Read /proc/modules and process modules
-    std::vector<std::string> proc_lines;
-    if (!read_lines_posix("/proc/modules", proc_lines)) return;
-
+void process_modules_detailed(ScanContext& context, const std::string& scanner_name, ModuleScanData& data,
+                            const std::vector<std::string>& proc_lines,
+                            const std::string& lib_modules_base) {
     size_t total = 0;
     size_t likely_out_of_tree = 0;
     size_t unsigned_count = 0;
@@ -240,16 +392,6 @@ void ModuleScanner::scan(ScanContext& context) {
     size_t large_text_section_modules = 0;
     size_t suspicious_name_section_modules = 0;
 
-    // Lambda for out-of-tree detection
-    auto is_out_of_tree_path = [](const std::string& p) -> bool {
-        return p.find("/extra/") != std::string::npos ||
-               p.find("/updates/") != std::string::npos ||
-               p.find("dkms") != std::string::npos ||
-               p.find("nvidia") != std::string::npos ||
-               p.find("virtualbox") != std::string::npos ||
-               p.find("vmware") != std::string::npos;
-    };
-
     for (const auto& line : proc_lines) {
         std::string name;
         if (!parse_module_line(line, name)) continue;
@@ -261,8 +403,10 @@ void ModuleScanner::scan(ScanContext& context) {
 
         auto itp = data.name_to_path.find(name);
         std::string path = (itp == data.name_to_path.end()) ? std::string() : itp->second;
+
+        // Check if out-of-tree
         bool oot = false;
-        if (!path.empty() && is_out_of_tree_path(path)) {
+        if (!path.empty() && is_out_of_tree_module(path)) {
             oot = true;
             ++likely_out_of_tree;
             if (data.oot_sample.size() < OOT_SAMPLE_LIMIT) {
@@ -270,46 +414,23 @@ void ModuleScanner::scan(ScanContext& context) {
             }
         }
 
-        // Signature analysis
+        // Analyze module signature and file existence
         bool unsigned_mod = false;
         bool missing_file = false;
         std::string full_path;
         if (!path.empty()) {
             full_path = lib_modules_base + path;
+            analyze_module_signature(path, full_path, unsigned_mod, missing_file, scanner_name, context);
 
-            if (path.size() >= 3 && memcmp(path.data() + path.size() - 3, ".ko", 3) == 0) {
-                // Uncompressed module
-                unsigned_mod = SignatureAnalyzer::is_unsigned_module(full_path);
-            } else if (CompressionUtils::is_compressed(path)) {
+            if (CompressionUtils::is_compressed(path)) {
                 ++compressed_count;
-                std::string contents;
-                if (path.size() >= 6 && memcmp(path.data() + path.size() - 6, ".ko.xz", 6) == 0) {
-                    contents = CompressionUtils::decompress_xz_bounded(full_path);
-                } else {
-                    contents = CompressionUtils::decompress_gz_bounded(full_path);
-                }
-
-                if (contents.empty()) {
-                    context.report.add_warning(this->name(), WarnCode::DecompressFail, path);
-                } else {
+                if (!unsigned_mod) {
                     ++compressed_scanned;
-                    if (contents.find("Module signature appended") == std::string::npos) {
-                        unsigned_mod = true;
-                        ++compressed_unsigned;
-                        if (data.compressed_unsigned_sample.size() < UNSIGNED_SAMPLE_LIMIT) {
-                            data.compressed_unsigned_sample.push_back(name);
-                        }
+                } else {
+                    ++compressed_unsigned;
+                    if (data.compressed_unsigned_sample.size() < UNSIGNED_SAMPLE_LIMIT) {
+                        data.compressed_unsigned_sample.push_back(name);
                     }
-                }
-            }
-
-            // File existence check using stat for better performance
-            struct stat st;
-            if (stat(full_path.c_str(), &st) != 0) {
-                missing_file = true;
-                ++missing_file_count;
-                if (data.missing_file_sample.size() < MISSING_FILE_SAMPLE_LIMIT) {
-                    data.missing_file_sample.push_back(name);
                 }
             }
         }
@@ -321,9 +442,16 @@ void ModuleScanner::scan(ScanContext& context) {
             }
         }
 
-        // Hidden module detection
-        bool hidden_proc_only = (data.sysfs_modules.find(name) == data.sysfs_modules.end() &&
-                                data.builtin_modules.find(name) == data.builtin_modules.end());
+        if (missing_file) {
+            ++missing_file_count;
+            if (data.missing_file_sample.size() < MISSING_FILE_SAMPLE_LIMIT) {
+                data.missing_file_sample.push_back(name);
+            }
+        }
+
+        // Check for hidden modules
+        bool hidden_proc_only = false;
+        detect_hidden_module(name, data, hidden_proc_only);
         if (hidden_proc_only) {
             ++hidden_in_proc_only_count;
             if (data.hidden_sample.size() < HIDDEN_SAMPLE_LIMIT) {
@@ -331,90 +459,12 @@ void ModuleScanner::scan(ScanContext& context) {
             }
         }
 
-        if (cfg.modules_anomalies_only) {
-            if (oot || unsigned_mod || missing_file || hidden_proc_only) {
-                Finding f;
-                f.id = name;
-                f.title = "Module anomaly: " + name;
-                f.severity = Severity::Medium;
-                f.description = "Kernel module anomaly";
-
-                if (unsigned_mod) {
-                    f.metadata["unsigned"] = "true";
-                    f.severity = Severity::High;
-                    f.description = "Unsigned kernel module detected";
-                }
-                if (oot) {
-                    f.metadata["out_of_tree"] = "true";
-                    if (f.severity < Severity::High) f.severity = Severity::High;
-                    f.description = "Out-of-tree kernel module";
-                }
-                if (missing_file) {
-                    f.metadata["missing_file"] = "true";
-                    f.severity = Severity::High;
-                    f.description = "Module file missing on disk";
-                }
-                if (hidden_proc_only) {
-                    f.metadata["hidden_sysfs"] = "true";
-                    f.severity = Severity::High;
-                    f.description = "Module present in /proc/modules but missing in /sys/module";
-                }
-
-                // ELF section heuristics (only if file exists)
-                if (!full_path.empty() && !missing_file) {
-                    auto sections = ElfModuleHeuristics::parse_sections(full_path);
-                    if (!sections.empty()) {
-                        if (ElfModuleHeuristics::has_wx_section(sections)) {
-                            f.metadata["wx_section"] = "true";
-                            if (f.severity < Severity::High) f.severity = Severity::High;
-                            ++wx_section_modules;
-                            if (data.wx_section_sample.size() < WX_SECTION_SAMPLE_LIMIT) {
-                                data.wx_section_sample.push_back(name);
-                            }
-                        }
-                        if (ElfModuleHeuristics::has_large_text_section(sections)) {
-                            uint64_t text_size = 0;
-                            for (const auto& s : sections) {
-                                if (s.name == ".text") {
-                                    text_size = s.size;
-                                    break;
-                                }
-                            }
-                            f.metadata["large_text_section"] = std::to_string(text_size);
-                            if (f.severity < Severity::High) f.severity = Severity::High;
-                            ++large_text_section_modules;
-                            if (data.large_text_section_sample.size() < LARGE_TEXT_SAMPLE_LIMIT) {
-                                data.large_text_section_sample.push_back(name);
-                            }
-                        }
-                        if (ElfModuleHeuristics::has_suspicious_section_name(sections)) {
-                            for (const auto& s : sections) {
-                                if (ElfModuleHeuristics::has_suspicious_section_name({s})) {
-                                    f.metadata["suspicious_section_name"] = s.name;
-                                    if (f.severity < Severity::High) f.severity = Severity::High;
-                                    ++suspicious_name_section_modules;
-                                    if (data.suspicious_section_name_sample.size() < SUSPICIOUS_SECTION_SAMPLE_LIMIT) {
-                                        data.suspicious_section_name_sample.push_back(name);
-                                    }
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-
-#ifdef SYS_SCAN_HAVE_OPENSSL
-                if (cfg.modules_hash && !full_path.empty() && !missing_file) {
-                    std::string hash = SignatureAnalyzer::compute_sha256(full_path);
-                    if (!hash.empty()) {
-                        f.metadata["sha256"] = hash;
-                    }
-                }
-#endif
-
-                if (!path.empty()) f.metadata["path"] = path;
-                context.report.add_finding(this->name(), std::move(f));
-            }
+        // Process anomalies if in anomalies-only mode
+        if (context.config.modules_anomalies_only) {
+            process_module_anomalies(context, scanner_name, name, path, full_path, oot, unsigned_mod,
+                                   missing_file, hidden_proc_only, data,
+                                   wx_section_modules, large_text_section_modules,
+                                   suspicious_name_section_modules);
         }
     }
 
@@ -438,8 +488,21 @@ void ModuleScanner::scan(ScanContext& context) {
         }
     }
 
-    if (cfg.modules_anomalies_only) return; // Done with anomalies-only mode
+    if (context.config.modules_anomalies_only) return; // Done with anomalies-only mode
 
+    // Create summary finding
+    build_summary_finding(context, scanner_name, data, total, likely_out_of_tree, unsigned_count,
+                         compressed_count, compressed_scanned, compressed_unsigned,
+                         missing_file_count, hidden_in_proc_only_count, sysfs_only_count,
+                         wx_section_modules, large_text_section_modules, suspicious_name_section_modules);
+}
+
+void build_summary_finding(ScanContext& context, const std::string& scanner_name, const ModuleScanData& data,
+                          size_t total, size_t likely_out_of_tree, size_t unsigned_count,
+                          size_t compressed_count, size_t compressed_scanned, size_t compressed_unsigned,
+                          size_t missing_file_count, size_t hidden_in_proc_only_count,
+                          size_t sysfs_only_count, size_t wx_section_modules,
+                          size_t large_text_section_modules, size_t suspicious_name_section_modules) {
     // Create summary finding
     Finding f;
     f.id = "module_summary";
@@ -606,7 +669,47 @@ void ModuleScanner::scan(ScanContext& context) {
         }
     }
 
-    context.report.add_finding(this->name(), std::move(f));
-} // end scan
+    context.report.add_finding(scanner_name, std::move(f));
+}
+
+void ModuleScanner::scan(ScanContext& context) {
+    ModuleScanData data;
+    auto& cfg = context.config;
+
+    // Get kernel release
+    struct utsname un {};
+    if (uname(&un) != 0) return;
+    std::string kernel_release = un.release;
+
+    // Build paths once
+    std::string modules_dep_path, modules_builtin_path, lib_modules_base;
+    setup_scan_paths(kernel_release, modules_dep_path, modules_builtin_path, lib_modules_base);
+
+    if (!cfg.modules_summary_only && !cfg.modules_anomalies_only) {
+        // Simple mode: just list modules
+        std::vector<std::string> proc_lines;
+        if (read_proc_modules(proc_lines)) {
+            handle_simple_mode(context, this->name(), proc_lines);
+        }
+        return;
+    }
+
+    // Summary/anomalies mode: gather detailed stats
+
+    // Build module name->path map from modules.dep
+    build_module_path_map(modules_dep_path, data);
+
+    // Prepare built-in module name set
+    build_builtin_modules_set(modules_builtin_path, data);
+
+    // Collect sysfs module directory names
+    collect_sysfs_modules(data);
+
+    // Read /proc/modules and process modules
+    std::vector<std::string> proc_lines;
+    if (!read_proc_modules(proc_lines)) return;
+
+    process_modules_detailed(context, this->name(), data, proc_lines, lib_modules_base);
+}
 
 } // namespace sys_scan
