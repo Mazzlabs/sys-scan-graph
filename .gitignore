@@ -243,3 +243,6 @@ debug_*
 
 # Assets (tracked - contains documentation images)
 # assets/  # <- Intentionally NOT ignored - contains docs images
+
+# Legacy directory (deprecated - no longer used)
+/legacy
