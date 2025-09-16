@@ -1,1 +1,0 @@
-# Legacy package for backward compatibility
