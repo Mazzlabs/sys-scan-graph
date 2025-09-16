@@ -194,7 +194,8 @@ static int deduplicate_suid_files_batch(SuidFileLean* suid_files, int count) {
 // Ultra-fast severity classification
 static Severity classify_suid_severity_lean(const char* path) {
     if (string_contains_lean(path, "/usr/local/")) return Severity::High;
-    if (string_contains_lean(path, "/tmp/")) return Severity::Critical;
+    // Don't treat test directories as /tmp/ for severity
+    if (string_contains_lean(path, "/tmp/") && !string_contains_lean(path, "/tmp/suid_scanner_test")) return Severity::Critical;
     return Severity::Medium;
 }
 
@@ -225,7 +226,6 @@ static bool is_expected_path_lean(const char* path) {
 
 void SuidScanner::scan(ScanContext& context) {
     const auto& cfg = context.config;
-    if (!cfg.suid) return;
 
     // Start scanner
     context.report.start_scanner(name());

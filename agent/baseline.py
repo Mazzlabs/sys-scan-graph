@@ -149,7 +149,7 @@ class BaselineStore:
         try:
             cur.execute("INSERT OR IGNORE INTO calibration_observation(host_id,scan_id,finding_hash,raw_weighted_sum,ts) VALUES(?,?,?,?,?)",
                         (host_id, scan_id, finding_hash, raw_weighted_sum, ts))
-            self.conn.commit()
+            # Removed individual commit for batching
         except Exception:
             pass
 

@@ -24,7 +24,6 @@ GraphState = Dict[str, Any]  # type: ignore
 
 # Core provider & helper imports (existing project modules)
 import llm_provider
-import legacy.graph_nodes
 import pipeline
 import knowledge
 import reduction
@@ -134,6 +133,33 @@ def _update_metrics_duration(state: StateType, metric_key: str, start_time: floa
     """Standardized metrics duration update."""
     duration = time.monotonic() - start_time
     state.setdefault('metrics', {})[metric_key] = duration
+
+def _append_warning(state: StateType, module: str, stage: str, error: str, hint: str | None = None):
+    wl = state.setdefault('warnings', [])
+    wl.append({
+        'module': module,
+        'stage': stage,
+        'error': error,
+        'hint': hint
+    })
+
+
+def _findings_from_graph(state: StateType) -> List[models.Finding]:
+    out: List[models.Finding] = []
+    for finding_dict in state.get('raw_findings', []) or []:
+        try:
+            # Provide minimal required fields; defaults for missing
+            out.append(models.Finding(
+                id=finding_dict.get('id','unknown'),
+                title=finding_dict.get('title','(no title)'),
+                severity=finding_dict.get('severity','info'),
+                risk_score=int(finding_dict.get('risk_score', finding_dict.get('risk_total', 0)) or 0),
+                metadata=finding_dict.get('metadata', {})
+            ))
+        except Exception:  # pragma: no cover - defensive
+            continue
+    return out
+
 
 def _update_metrics_counter(state: StateType, counter_key: str, increment: int = 1) -> None:
     """Standardized metrics counter update."""
@@ -352,7 +378,7 @@ def enrich_findings(state: StateType) -> StateType:
     state = util_normalization.ensure_monotonic_timing(state)
 
     try:
-        findings = legacy.graph_nodes._findings_from_graph(state)  # type: ignore
+        findings = _findings_from_graph(state)
         sr = models.ScannerResult(
             scanner="mixed",
             finding_count=len(findings),
@@ -406,7 +432,7 @@ def summarize_host_state(state: StateType) -> StateType:
     max_iter = int(_get_env_var('AGENT_MAX_SUMMARY_ITERS', '3'))
     iters = int(state.get('iteration_count', 0) or 0)
     if iters >= max_iter:
-        legacy.graph_nodes._append_warning(state, 'graph', 'summarize', 'iteration_limit_reached')  # type: ignore
+        _append_warning(state, 'graph', 'summarize', 'iteration_limit_reached')  # type: ignore
         return state
     
     try:
@@ -428,7 +454,7 @@ def summarize_host_state(state: StateType) -> StateType:
         state['iteration_count'] = iters + 1
     except Exception as e:  # pragma: no cover
         logger.exception("summarize_host_state failed: %s", e)
-        legacy.graph_nodes._append_warning(state, 'graph', 'summarize', str(e))  # type: ignore
+        _append_warning(state, 'graph', 'summarize', str(e))  # type: ignore
     return state
 
 
@@ -463,7 +489,7 @@ def suggest_rules(state: StateType) -> StateType:
         state['suggested_rules'] = result.get('suggestions', [])
     except Exception as e:  # pragma: no cover
         logger.exception("suggest_rules failed: %s", e)
-        legacy.graph_nodes._append_warning(state, 'graph', 'rule_mine', str(e))  # type: ignore
+        _append_warning(state, 'graph', 'rule_mine', str(e))  # type: ignore
     finally:
         if tf_path:
             try:
@@ -514,7 +540,7 @@ def correlate_findings(state: StateType) -> StateType:
         state['correlations'] = [c.model_dump() for c in correlations]
     except Exception as e:  # pragma: no cover
         logger.exception("correlate_findings failed: %s", e)
-        legacy.graph_nodes._append_warning(state, 'graph', 'correlate', str(e))  # type: ignore
+        _append_warning(state, 'graph', 'correlate', str(e))  # type: ignore
         if 'correlated_findings' not in state:
             state['correlated_findings'] = state.get('enriched_findings', [])
     return state
@@ -556,7 +582,7 @@ async def enhanced_enrich_findings(state: StateType) -> StateType:
 
     # Cache miss -> perform enrichment
     try:
-        findings = legacy.graph_nodes._findings_from_graph(state)  # type: ignore
+        findings = _findings_from_graph(state)
         astate = _build_agent_state(findings, "mixed")
         # Run enrichment pipeline pieces (sync) inside async context
         astate = pipeline.augment(astate)
@@ -579,7 +605,7 @@ async def enhanced_enrich_findings(state: StateType) -> StateType:
             ck_list.append(cache_key)
     except Exception as e:  # pragma: no cover
         logger.exception("enhanced_enrich_findings failed key=%s error=%s", cache_key, e)
-        legacy.graph_nodes._append_warning(state, "graph", "enhanced_enrich", f"{type(e).__name__}: {e}")  # type: ignore
+        _append_warning(state, "graph", "enhanced_enrich", f"{type(e).__name__}: {e}")  # type: ignore
         if "enriched_findings" not in state:
             state["enriched_findings"] = state.get("raw_findings", [])
 
@@ -641,7 +667,7 @@ async def enhanced_summarize_host_state(state: StateType) -> StateType:
         max_iter = int(_get_env_var('AGENT_MAX_SUMMARY_ITERS', '3'))
         iters = int(state.get('iteration_count', 0) or 0)
         if iters >= max_iter:
-            legacy.graph_nodes._append_warning(state, 'graph', 'enhanced_summarize', 'iteration_limit_reached')  # type: ignore
+            _append_warning(state, 'graph', 'enhanced_summarize', 'iteration_limit_reached')  # type: ignore
             return state
 
         provider = get_enhanced_llm_provider()
@@ -676,7 +702,7 @@ async def enhanced_summarize_host_state(state: StateType) -> StateType:
         _update_metrics_counter(state, 'summarize_calls')
     except Exception as e:  # pragma: no cover
         logger.exception('enhanced_summarize_host_state failed: %s', e)
-        legacy.graph_nodes._append_warning(state, 'graph', 'enhanced_summarize', f"{type(e).__name__}: {e}")  # type: ignore
+        _append_warning(state, 'graph', 'enhanced_summarize', f"{type(e).__name__}: {e}")  # type: ignore
     finally:
         _update_metrics_duration(state, 'summarize_duration', start)
     return state
@@ -754,7 +780,7 @@ async def enhanced_suggest_rules(state: StateType) -> StateType:
         metrics['rule_suggest_count'] = len(suggestions) if hasattr(suggestions, '__len__') else 0
     except Exception as e:  # pragma: no cover
         logger.exception('enhanced_suggest_rules failed: %s', e)
-        legacy.graph_nodes._append_warning(state, 'graph', 'enhanced_suggest_rules', f"{type(e).__name__}: {e}")  # type: ignore
+        _append_warning(state, 'graph', 'enhanced_suggest_rules', f"{type(e).__name__}: {e}")  # type: ignore
     finally:
         _update_metrics_duration(state, 'rule_suggest_duration', start)
         if tf_path:

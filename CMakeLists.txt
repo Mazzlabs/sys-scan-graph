@@ -410,6 +410,10 @@ add_executable(test_suid_scanner tests/test_suid_scanner.cpp)
 target_link_libraries(test_suid_scanner PRIVATE sys_scan_core GTest::gtest_main GTest::gmock)
 add_test(NAME suid_scanner COMMAND test_suid_scanner)
 
+add_executable(test_ioc_scanner tests/test_ioc_scanner.cpp)
+target_link_libraries(test_ioc_scanner PRIVATE sys_scan_core GTest::gtest_main GTest::gmock)
+add_test(NAME ioc_scanner COMMAND test_ioc_scanner)
+
 add_executable(test_rule_engine tests/test_rule_engine.cpp)
   target_link_libraries(test_rule_engine PRIVATE sys_scan_core GTest::gtest_main GTest::gmock)
   add_test(NAME rule_engine COMMAND test_rule_engine)

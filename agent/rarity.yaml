@@ -1,0 +1,5 @@
+modules:
+- module: test_module
+  hosts: 1
+  rarity_score: 0.0
+signature: f0058a306fedd467b4f40bb349906682df3d5bb0868123f7b0226c8ff433a696

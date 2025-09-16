@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Any, Union
 from pydantic import BaseModel, Field
 import hashlib
 
@@ -112,7 +112,6 @@ class Summaries(BaseModel):
     triage_summary: Optional[dict] = None        # structured triage output (Prompt B)
     action_narrative: Optional[str] = None       # human narrative of actions (Prompt C)
     metrics: Optional[dict] = None               # token/latency metrics & alerts
-    metrics: Optional[dict] = None               # token / latency metrics & flags
     causal_hypotheses: Optional[list[dict]] = None  # experimental speculative root cause hypotheses
     attack_coverage: Optional[dict] = None       # ATT&CK technique coverage summary
 
@@ -139,7 +138,7 @@ class FollowupResult(BaseModel):
 class EnrichedOutput(BaseModel):
     version: str = "agent_mvp_1"
     correlations: List[Correlation]
-    reductions: Reductions
+    reductions: dict
     summaries: Summaries
     actions: List[ActionItem]
     raw_reference: Optional[str] = None  # sha256 of original report file
@@ -154,7 +153,7 @@ class AgentState(BaseModel):
     raw_report: Optional[dict] = None
     report: Optional[Report] = None
     correlations: List[Correlation] = Field(default_factory=list)
-    reductions: Reductions = Field(default_factory=Reductions)
+    reductions: dict = Field(default_factory=dict)
     summaries: Summaries = Field(default_factory=Summaries)
     actions: List[ActionItem] = Field(default_factory=list)
     followups: List[FollowupResult] = Field(default_factory=list)

@@ -241,7 +241,7 @@ void WorldWritableScanner::scan(ScanContext& context) {
     const size_t scan_dir_count = sizeof(scan_dirs) / sizeof(scan_dirs[0]);
 
     // Single batch for all files
-    FileBatch batch = {};
+    FileBatch* batch = new FileBatch();
     InodeEntry inode_entries[MAX_INODES_LEAN] = {};
     size_t inode_count = 0;
     size_t total_files = 0;
@@ -250,14 +250,14 @@ void WorldWritableScanner::scan(ScanContext& context) {
 
     // Single-pass directory scanning
     for (size_t d = 0; d < scan_dir_count && total_files < MAX_FILES_LEAN; ++d) {
-        size_t files_added = scan_directory_batch_lean(scan_dirs[d], &batch, MAX_FILES_LEAN - total_files, total_files);
+        size_t files_added = scan_directory_batch_lean(scan_dirs[d], batch, MAX_FILES_LEAN - total_files, total_files);
         total_files += files_added;
     }
 
-    batch.count = total_files;
+    batch->count = total_files;
 
     // Process all files in single batch
-    process_file_batch_lean(&batch, context, context.config.world_writable_exclude,
+    process_file_batch_lean(batch, context, context.config.world_writable_exclude,
                            ww_limit, &ww_count, interpreters, interpreter_count,
                            inode_entries, &inode_count);
 
@@ -265,18 +265,21 @@ void WorldWritableScanner::scan(ScanContext& context) {
     for (const auto& extra_dir : context.config.world_writable_dirs) {
         if (total_files >= MAX_FILES_LEAN) break;
 
-        FileBatch extra_batch = {};
-        size_t extra_files = scan_directory_batch_lean(extra_dir.c_str(), &extra_batch,
+        FileBatch* extra_batch = new FileBatch();
+        size_t extra_files = scan_directory_batch_lean(extra_dir.c_str(), extra_batch,
                                                       MAX_FILES_LEAN - total_files, 0);
-        extra_batch.count = extra_files;
+        extra_batch->count = extra_files;
 
         if (extra_files > 0) {
-            process_file_batch_lean(&extra_batch, context, context.config.world_writable_exclude,
+            process_file_batch_lean(extra_batch, context, context.config.world_writable_exclude,
                                    ww_limit, &ww_count, interpreters, interpreter_count,
                                    inode_entries, &inode_count);
             total_files += extra_files;
         }
+        delete extra_batch;
     }
+
+    delete batch;
 
     if (!context.config.fs_hygiene) return;  // Advanced checks gated
 

@@ -93,21 +93,21 @@ def redact_obj(obj: Any):  # pragma: no cover small helper
     return obj
 
 
-def redact_reductions(reductions: models.Reductions) -> models.Reductions:
+def redact_reductions(reductions: dict) -> dict:
     red = deepcopy(reductions)
     # top_findings / top_risks titles and maybe tags
     new_tf = []
-    for f in red.top_findings:
+    for f in red.get('top_findings', []):
         f2 = {k: (redact_text(v) if isinstance(v, str) else v) for k, v in f.items()}
         new_tf.append(f2)
-    red.top_findings = new_tf
-    if getattr(red, 'top_risks', None) is not None:
-        red.top_risks = new_tf
+    red['top_findings'] = new_tf
+    if 'top_risks' in red and red['top_risks'] is not None:
+        red['top_risks'] = new_tf
     # Module summary and others: just sanitize string values recursively
-    if isinstance(red.module_summary, dict):
-        red.module_summary = redact_obj(red.module_summary)  # type: ignore
-    if isinstance(red.suid_summary, dict):
-        red.suid_summary = redact_obj(red.suid_summary)  # type: ignore
-    if isinstance(red.network_summary, dict):
-        red.network_summary = redact_obj(red.network_summary)  # type: ignore
+    if isinstance(red.get('module_summary'), dict):
+        red['module_summary'] = redact_obj(red['module_summary'])
+    if isinstance(red.get('suid_summary'), dict):
+        red['suid_summary'] = redact_obj(red['suid_summary'])
+    if isinstance(red.get('network_summary'), dict):
+        red['network_summary'] = redact_obj(red['network_summary'])
     return red
