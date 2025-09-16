@@ -68,6 +68,7 @@ cd agent
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+pip install -e .
 ```
 
 ### Basic Usage
@@ -80,7 +81,7 @@ sys-scan --canonical --modules-summary --min-severity info > report.json
 
 # Run with intelligence layer
 sys-scan --canonical --output report.json
-sys-scan-graph-agent analyze --report report.json --out enriched_report.json
+sys-scan-agent analyze --report report.json --out enriched_report.json
 ```
 
 #### Using Source Build
@@ -91,14 +92,14 @@ sys-scan-graph-agent analyze --report report.json --out enriched_report.json
 
 # Run with intelligence layer
 ./build/sys-scan --canonical --output report.json
-python -m agent.cli analyze --report report.json --out enriched_report.json
+python -m sys_scan_graph_agent.cli analyze --report report.json --out enriched_report.json
 ```
 
 ### Generate HTML Report
 
 ```bash
 # Enable HTML generation in config.yaml, then run:
-sys-scan-graph-agent analyze --report report.json --out enriched_v2.json --prev enriched_report.json
+sys-scan-agent analyze --report report.json --out enriched_v2.json --prev enriched_report.json
 ```
 
 ---

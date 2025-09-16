@@ -5,7 +5,7 @@ import os
 
 # Read the README file
 def read_readme():
-    with open(os.path.join(os.path.dirname(__file__), 'README.md'), encoding='utf-8') as f:
+    with open(os.path.join(os.path.dirname(__file__), '..', 'README.md'), encoding='utf-8') as f:
         return f.read()
 
 # Read requirements
@@ -44,56 +44,6 @@ setup(
     author_email='joseph@mazzlabs.works',
     url='https://github.com/Mazzlabs/sys-scan-graph',
     packages=find_packages(),
-    py_modules=[
-        'cli',
-        'rules',
-        'baseline', 
-        'config',
-        'models',
-        'audit',
-        'calibration',
-        'canonicalize',
-        'counterfactual',
-        'data_governance',
-        'db_pool',
-        'endpoint_classification',
-        'evaluation',
-        'graph',
-        'graph_analysis',
-        'graph_nodes_scaffold',
-        'graph_state',
-        'hf_loader',
-        'integrity',
-        'knowledge',
-        'llm',
-        'llm_cache',
-        'llm_models',
-        'llm_provider',
-        'llm_provider_enhanced',
-        'metrics',
-        'metrics_exporter',
-        'metrics_node',
-        'migration_v3',
-        'performance_baseline',
-        'pipeline',
-        'rarity_generate',
-        'redaction',
-        'reduction',
-        'report_diff',
-        'report_html',
-        'retriever',
-        'risk',
-        'rule_gap_miner',
-        'rule_redundancy',
-        'rule_refiner',
-        'rule_suggest',
-        'sandbox',
-        'tool_wrapper',
-        'tools',
-        'tools_enhanced',
-        'util_hash',
-        'util_normalization'
-    ],
     include_package_data=True,
     install_requires=read_requirements(),
     extras_require={

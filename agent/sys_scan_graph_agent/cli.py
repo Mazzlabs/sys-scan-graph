@@ -3,35 +3,41 @@ import json
 from pathlib import Path
 import typer
 from rich import print
-import rules
-import baseline
-import integrity
-import audit
-import rule_gap_miner
-import rarity_generate
-import sandbox
-import risk
-import calibration
-import config
-import report_html
-import report_diff
-import graph_nodes_scaffold
-import graph_state
+from . import rules
+from . import baseline
+from . import integrity
+from . import audit
+from . import rule_gap_miner
+from . import rarity_generate
+from . import sandbox
+from . import risk
+from . import calibration
+from . import config
+from . import report_html
+from . import report_diff
+from . import graph_nodes_scaffold
+from . import graph_state
 import time
 from jsonschema import validate as js_validate, ValidationError
 # Phase 10 imports
 import os
 import urllib.request
 
-def run_scaffold_workflow(report_path: Path) -> tuple:
-    """Run the scaffold workflow and return enriched output and final state with metrics."""
+def run_intelligence_workflow(report_path: Path) -> tuple:
+    """Run the intelligence workflow and return enriched output and final state with metrics."""
     # Load the report data
     import json
     raw_data = json.loads(report_path.read_text())
     
-    # Initialize state
+    # Initialize state - aggregate findings from all scanners
+    all_findings = []
+    if raw_data.get('results'):
+        for scanner_result in raw_data['results']:
+            findings = scanner_result.get('findings', [])
+            all_findings.extend(findings)
+    
     initial_state = {
-        'raw_findings': raw_data.get('results', [{}])[0].get('findings', []) if raw_data.get('results') else [],
+        'raw_findings': all_findings,
         'enriched_findings': [],
         'correlated_findings': [],
         'suggested_rules': [],
@@ -59,31 +65,44 @@ def run_scaffold_workflow(report_path: Path) -> tuple:
     }
     
     # Normalize initial state
-    state = normalize_graph_state(initial_state)
+    state = graph_state.normalize_graph_state(initial_state)
     
-    # Run scaffold workflow
+    # Run intelligence workflow
     try:
-        state = enrich_findings(state)
-        state = correlate_findings(state)
-        state = scaffold_summarize(state)
-        state = scaffold_suggest_rules(state)
+        state = graph_nodes_scaffold.enrich_findings(state)
+        state = graph_nodes_scaffold.correlate_findings(state)
+        # state = scaffold_summarize(state)  # TODO: implement
+        # state = scaffold_suggest_rules(state)  # TODO: implement
         # Run async nodes
         import asyncio
         async def run_async_nodes():
-            s = await risk_analyzer(state)
-            s = await compliance_checker(s)
-            s = await metrics_collector(s)
+            s = await graph_nodes_scaffold.risk_analyzer(state)
+            s = await graph_nodes_scaffold.compliance_checker(s)
+            s = await graph_nodes_scaffold.metrics_collector(s)
             return s
         
         # Run async workflow
         final_state = asyncio.run(run_async_nodes())
         
         # Create enriched output (simplified version)
-        from models import EnrichedOutput, Reductions, Summaries
+        from .models import EnrichedOutput, Reductions, Summaries
+        
+        # Generate executive summary
+        executive_summary = graph_nodes_scaffold._generate_executive_summary(
+            final_state.get('enriched_findings', []),
+            final_state.get('correlations', []),
+            final_state.get('risk_assessment', {})
+        )
+        
+        # Generate reductions
+        reductions_data = graph_nodes_scaffold._generate_reductions(
+            final_state.get('enriched_findings', [])
+        )
+        
         enriched = EnrichedOutput(
             correlations=final_state.get('correlations', []),
-            reductions=Reductions(),
-            summaries=Summaries(),
+            reductions=Reductions(**reductions_data).model_dump(),
+            summaries=Summaries(executive_summary=executive_summary),
             actions=[],
             enriched_findings=final_state.get('enriched_findings', [])
         )
@@ -105,12 +124,12 @@ def analyze(report: Path = typer.Option(..., exists=True, readable=True, help="P
             dry_run: bool = typer.Option(False, help="Sandbox dry-run (no external commands executed)"),
             prev: Path = typer.Option(None, help="Previous enriched report for diff"),
             metrics_out: Path = typer.Option(None, help="Export node telemetry metrics to file (supports .json, .csv, .prom extensions)")):
-    cfg = load_config()
+    cfg = config.load_config()
     if dry_run:
         sandbox_config(dry_run=True)
-    enriched, final_state = run_scaffold_workflow(report)
+    enriched, final_state = run_intelligence_workflow(report)
     out.write_text(enriched.model_dump_json(indent=2))
-    print(f"[green]Wrote enriched output -> {out} (Scaffold mode)")
+    print(f"[green]Wrote enriched output -> {out}")
 
     # Export metrics if requested
     if metrics_out:
@@ -185,7 +204,7 @@ def validate_report(report: Path = typer.Option(..., exists=True, help="Path to 
     except ValidationError as e:
         print(f"[red]Schema validation error: {e.message}[/red]")
         raise typer.Exit(code=3)
-    enriched, _ = run_scaffold_workflow(report)
+    enriched, _ = run_intelligence_workflow(report)
     elapsed_ms = int((time.time() - start)*1000)
     print(f"[green]Validation OK[/green] elapsed_ms={elapsed_ms} findings={data.get('summary',{}).get('finding_count_total')} correlations={len(enriched.correlations)}")
     if elapsed_ms > max_ms:
@@ -215,7 +234,7 @@ def validate_batch(dir: Path = typer.Option(..., exists=True, help="Directory co
         except ValidationError as e:
             print(f"[red]{p.name}: schema_error {e.message}")
             raise typer.Exit(code=7)
-        run_scaffold_workflow(p)
+        run_intelligence_workflow(p)
         ms = int((time.time()-start)*1000)
         worst = max(worst, ms)
         print(f"[green]{p.name} OK[/green] {ms}ms")
@@ -268,7 +287,7 @@ def risk_decision(report: Path = typer.Option(..., exists=True, help="Raw v2 rep
                   decision: str = typer.Option(..., help="tp|fp|ignore"),
                   db: Path = typer.Option(Path("agent_baseline.db"))):
     # Re-run pipeline to ensure we have composite hash mapping
-    enriched, _ = run_scaffold_workflow(report)
+    enriched, _ = run_intelligence_workflow(report)
     # Need to reconstruct finding composite hash using scanner
     raw = json.loads(report.read_text())
     host_id = raw.get('meta',{}).get('host_id') or enriched.enriched_findings[0].metadata.get('host_id','unknown_host') if enriched.enriched_findings else 'unknown_host'

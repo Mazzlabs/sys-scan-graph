@@ -1,1 +1,1 @@
-# sys-scan-graph-agent package
+# Agent package init
