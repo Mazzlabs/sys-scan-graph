@@ -1,0 +1,142 @@
+[
+  {
+    "id": "corr_process_network_17025188_2f278368",
+    "title": "Potential malware C2 communication: gnome-shell",
+    "severity": "critical",
+    "risk_score": 95,
+    "base_severity_score": 95,
+    "description": "Process 'gnome-shell' showing signs of malware with C2 communications",
+    "metadata": {
+      "process_name": "gnome-shell",
+      "c2_connections": 1,
+      "correlation_reason": "malware_c2_communication"
+    },
+    "operational_error": false,
+    "category": "correlation",
+    "tags": [
+      "correlation",
+      "malware_c2",
+      "process_network"
+    ],
+    "risk_subscores": {
+      "impact": 0.22457440909457926,
+      "exposure": 0.5440462814624306,
+      "anomaly": 0.2878598961879806,
+      "confidence": 0.7099588125256778
+    },
+    "correlation_refs": [
+      "proc_2302_1",
+      "net_mal_17627_1"
+    ],
+    "baseline_status": "new",
+    "severity_source": "correlation",
+    "allowlist_reason": null,
+    "probability_actionable": 0.5626197539774587,
+    "graph_degree": 2,
+    "cluster_id": "corr_process_network_17025188",
+    "rationale": "Correlation analysis by process_network producer",
+    "risk_total": 95,
+    "host_role": null,
+    "host_role_rationale": null,
+    "metric_drift": null,
+    "correlation_type": "malware_c2",
+    "correlation_strength": 0.5366701814652501,
+    "timestamp": "2025-09-19T03:44:03.218725"
+  },
+  {
+    "id": "corr_process_network_17025188_2d87be36",
+    "title": "Suspicious process with network activity: nc -l 4444",
+    "severity": "high",
+    "risk_score": 75,
+    "base_severity_score": 75,
+    "description": "Suspicious process 'nc -l 4444' detected alongside unusual network activity",
+    "metadata": {
+      "process_name": "nc -l 4444",
+      "network_activities": 1,
+      "correlation_reason": "suspicious_process_network_activity"
+    },
+    "operational_error": false,
+    "category": "correlation",
+    "tags": [
+      "correlation",
+      "process_network_suspicious",
+      "process_network"
+    ],
+    "risk_subscores": {
+      "impact": 0.42607266660415577,
+      "exposure": 0.19831224015347526,
+      "anomaly": 0.3657191168679308,
+      "confidence": 0.925932044745655
+    },
+    "correlation_refs": [
+      "proc_susp_17403_2",
+      "net_mal_17627_1"
+    ],
+    "baseline_status": "new",
+    "severity_source": "correlation",
+    "allowlist_reason": null,
+    "probability_actionable": 0.3143762822539388,
+    "graph_degree": 2,
+    "cluster_id": "corr_process_network_17025188",
+    "rationale": "Correlation analysis by process_network producer",
+    "risk_total": 75,
+    "host_role": null,
+    "host_role_rationale": null,
+    "metric_drift": null,
+    "correlation_type": "process_network_suspicious",
+    "correlation_strength": 0.5508863201507583,
+    "timestamp": "2025-09-19T03:44:03.218743"
+  },
+  {
+    "id": "corr_kernel_fefba1fc_ee73a753",
+    "title": "Kernel process controls with suspicious activity",
+    "severity": "medium",
+    "risk_score": 65,
+    "base_severity_score": 65,
+    "description": "Kernel parameters controlling process execution detected alongside suspicious processes: nc -l 4444",
+    "metadata": {
+      "process_parameters_count": 2,
+      "parameter_names": [
+        "randomize_va_space",
+        "randomize_va_space"
+      ],
+      "suspicious_processes_count": 1,
+      "process_names": [
+        "nc -l 4444"
+      ],
+      "correlation_reason": "kernel_process_controls_suspicious_activity"
+    },
+    "operational_error": false,
+    "category": "correlation",
+    "tags": [
+      "correlation",
+      "kernel_process_suspicious",
+      "kernel"
+    ],
+    "risk_subscores": {
+      "impact": 0.6033899750558702,
+      "exposure": 0.11122305583876949,
+      "anomaly": 0.7119679249392021,
+      "confidence": 0.7220974353179621
+    },
+    "correlation_refs": [
+      "kernel_randomize_va_space_9468f03a",
+      "kernel_randomize_va_space_9dc7718a",
+      "proc_susp_17403_2"
+    ],
+    "baseline_status": "new",
+    "severity_source": "correlation",
+    "allowlist_reason": null,
+    "probability_actionable": 0.5265590806911742,
+    "graph_degree": 3,
+    "cluster_id": "corr_kernel_fefba1fc",
+    "rationale": "Correlation analysis by kernel producer",
+    "risk_total": 65,
+    "host_role": null,
+    "host_role_rationale": null,
+    "metric_drift": null,
+    "correlation_type": "kernel_process_suspicious",
+    "correlation_strength": 0.7879748843044267,
+    "timestamp": "2025-09-19T03:44:03.218864"
+  }
+]

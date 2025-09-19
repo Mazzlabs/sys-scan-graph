@@ -1,0 +1,346 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mazzlabs/sys-scan-graph/schema/ground_truth.json",
+  "title": "sys-scan Ground Truth Schema for Synthetic Data Generation",
+  "description": "Comprehensive schema for ground truth data including raw scanner outputs, enrichments, correlations, and risk scores that the fine-tuned model should learn to produce.",
+  "type": "object",
+  "required": ["version", "enriched_findings", "correlations", "reductions", "summaries", "actions"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Version of the ground truth schema",
+      "const": "ground_truth_v1"
+    },
+    "enriched_findings": {
+      "type": "array",
+      "description": "Array of enriched findings with risk scores and metadata",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "severity", "risk_score", "base_severity_score", "description", "metadata", "risk_subscores", "probability_actionable", "baseline_status", "tags"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the finding"
+          },
+          "title": {
+            "type": "string",
+            "description": "Human-readable title"
+          },
+          "severity": {
+            "enum": ["info", "low", "medium", "high", "critical"],
+            "description": "Severity level"
+          },
+          "risk_score": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Calculated risk score"
+          },
+          "base_severity_score": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Base severity score from scanner"
+          },
+          "description": {
+            "type": "string",
+            "description": "Detailed description"
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Additional metadata from scanner",
+            "additionalProperties": true
+          },
+          "operational_error": {
+            "type": "boolean",
+            "description": "Whether this is an operational error"
+          },
+          "category": {
+            "type": "string",
+            "description": "Category of the finding"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tags for categorization and correlation"
+          },
+          "risk_subscores": {
+            "type": "object",
+            "required": ["impact", "exposure", "anomaly", "confidence"],
+            "properties": {
+              "impact": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Impact subscore"
+              },
+              "exposure": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Exposure subscore"
+              },
+              "anomaly": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Anomaly subscore"
+              },
+              "confidence": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Confidence subscore"
+              }
+            },
+            "additionalProperties": true,
+            "description": "Detailed risk subscores"
+          },
+          "correlation_refs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "References to correlations"
+          },
+          "baseline_status": {
+            "enum": ["new", "existing", "unknown"],
+            "description": "Status relative to baseline"
+          },
+          "severity_source": {
+            "type": "string",
+            "description": "Source of severity determination"
+          },
+          "allowlist_reason": {
+            "type": "string",
+            "description": "Reason if allowlisted"
+          },
+          "probability_actionable": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Probability that the finding is actionable"
+          },
+          "graph_degree": {
+            "type": "integer",
+            "description": "Degree in correlation graph"
+          },
+          "cluster_id": {
+            "type": "string",
+            "description": "Cluster identifier"
+          },
+          "rationale": {
+            "type": "string",
+            "description": "Rationale for the finding"
+          },
+          "risk_total": {
+            "type": "integer",
+            "description": "Total risk score"
+          },
+          "host_role": {
+            "type": "string",
+            "description": "Role of the host"
+          },
+          "host_role_rationale": {
+            "type": "string",
+            "description": "Rationale for host role"
+          },
+          "metric_drift": {
+            "type": "object",
+            "description": "Metric drift information",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "correlations": {
+      "type": "array",
+      "description": "Array of correlations between findings",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "related_finding_ids"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique correlation identifier"
+          },
+          "title": {
+            "type": "string",
+            "description": "Correlation title"
+          },
+          "rationale": {
+            "type": "string",
+            "description": "Rationale for the correlation"
+          },
+          "related_finding_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "IDs of related findings"
+          },
+          "risk_score_delta": {
+            "type": "integer",
+            "description": "Change in risk score due to correlation"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Correlation tags"
+          },
+          "severity": {
+            "enum": ["info", "low", "medium", "high", "critical", null],
+            "description": "Severity of the correlation"
+          },
+          "exposure_tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Exposure tags"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "reductions": {
+      "type": "object",
+      "description": "Aggregated reductions and summaries",
+      "properties": {
+        "module_summary": {
+          "type": "object",
+          "description": "Summary of kernel modules",
+          "additionalProperties": true
+        },
+        "suid_summary": {
+          "type": "object",
+          "description": "Summary of SUID binaries",
+          "additionalProperties": true
+        },
+        "network_summary": {
+          "type": "object",
+          "description": "Summary of network findings",
+          "additionalProperties": true
+        },
+        "top_findings": {
+          "type": "array",
+          "description": "Top findings by risk",
+          "items": {
+            "type": "object",
+            "required": ["id", "title", "severity", "risk_score", "probability_actionable"],
+            "properties": {
+              "id": {"type": "string"},
+              "title": {"type": "string"},
+              "severity": {"enum": ["info", "low", "medium", "high", "critical"]},
+              "risk_score": {"type": "integer"},
+              "probability_actionable": {"type": "number"}
+            }
+          }
+        },
+        "top_risks": {
+          "type": "object",
+          "description": "Top risks summary",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "summaries": {
+      "type": "object",
+      "description": "Various summary narratives",
+      "properties": {
+        "executive_summary": {
+          "type": "string",
+          "description": "Executive-level summary"
+        },
+        "analyst": {
+          "type": "string",
+          "description": "Analyst-level summary"
+        },
+        "consistency_findings": {
+          "type": "string",
+          "description": "Consistency findings"
+        },
+        "triage_summary": {
+          "type": "string",
+          "description": "Triage summary"
+        },
+        "action_narrative": {
+          "type": "string",
+          "description": "Action narrative"
+        },
+        "metrics": {
+          "type": "object",
+          "description": "Metrics summary",
+          "additionalProperties": true
+        },
+        "causal_hypotheses": {
+          "type": "string",
+          "description": "Causal hypotheses"
+        },
+        "attack_coverage": {
+          "type": "string",
+          "description": "Attack coverage summary"
+        }
+      },
+      "additionalProperties": true
+    },
+    "actions": {
+      "type": "array",
+      "description": "Recommended actions",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "title": {"type": "string"},
+          "description": {"type": "string"},
+          "priority": {"type": "string"},
+          "severity": {"enum": ["info", "low", "medium", "high", "critical"]}
+        },
+        "additionalProperties": true
+      }
+    },
+    "raw_reference": {
+      "type": "object",
+      "description": "Reference to raw scanner output",
+      "additionalProperties": true
+    },
+    "correlation_graph": {
+      "type": "object",
+      "description": "Correlation graph data",
+      "additionalProperties": true
+    },
+    "followups": {
+      "type": "array",
+      "description": "Follow-up actions or tool executions",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "enrichment_results": {
+      "type": "object",
+      "description": "Results of enrichment process",
+      "additionalProperties": true
+    },
+    "multi_host_correlation": {
+      "type": "array",
+      "description": "Cross-host correlations",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "integrity": {
+      "type": "object",
+      "description": "Integrity verification data",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

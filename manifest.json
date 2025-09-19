@@ -1,0 +1,10 @@
+{
+  "version": "0.0.0",
+  "rule_pack_sha": null,
+  "weights": {
+    "impact": 1.0,
+    "exposure": 1.0,
+    "anomaly": 1.0
+  },
+  "embedding_model_hash": "7c9e73d90f56cf91c328b254d263e95ef1bcf1cc7baf60891e1fba658acae822"
+}

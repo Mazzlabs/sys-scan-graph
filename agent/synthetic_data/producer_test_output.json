@@ -1,0 +1,319 @@
+{
+  "producers": [
+    "processes",
+    "network",
+    "kernel_params",
+    "modules",
+    "world_writable",
+    "suid",
+    "ioc",
+    "mac"
+  ],
+  "total_findings": 80,
+  "sample_findings": {
+    "processes": {
+      "id": "proc_6738_0",
+      "title": "Running process: systemd",
+      "severity": "info",
+      "risk_score": 10,
+      "base_severity_score": 10,
+      "description": "Normal system process /usr/bin/systemd is running with PID 6738",
+      "metadata": {
+        "pid": 6738,
+        "command": "/usr/bin/systemd",
+        "user": "root",
+        "state": "S (sleeping)",
+        "ppid": 897
+      },
+      "operational_error": false,
+      "category": "processes",
+      "tags": [
+        "processes",
+        "baseline:existing",
+        "low_priority"
+      ],
+      "risk_subscores": {
+        "impact": 0.08,
+        "exposure": 0.06,
+        "anomaly": 0.15,
+        "confidence": 0.82
+      },
+      "correlation_refs": [],
+      "baseline_status": "existing",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.104,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 10,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    },
+    "network": {
+      "id": "net_normal_443_0",
+      "title": "Normal network service on port 443",
+      "severity": "info",
+      "risk_score": 10,
+      "base_severity_score": 10,
+      "description": "Standard service listening on port 443/tcp6",
+      "metadata": {
+        "port": 443,
+        "protocol": "tcp6",
+        "state": "ESTABLISHED",
+        "local_address": "[::]:443",
+        "foreign_address": "192.168.1.206:46669",
+        "inode": 85027
+      },
+      "operational_error": false,
+      "category": "network",
+      "tags": [
+        "network",
+        "baseline:new",
+        "low_priority"
+      ],
+      "risk_subscores": {
+        "impact": 0.06,
+        "exposure": 0.02,
+        "anomaly": 0.19,
+        "confidence": 0.92
+      },
+      "correlation_refs": [],
+      "baseline_status": "unknown",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.132,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 10,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    },
+    "kernel_params": {
+      "id": "kernel_tcp_syncookies_6f6082d5",
+      "title": "tcp_syncookies",
+      "severity": "info",
+      "risk_score": 10,
+      "base_severity_score": 10,
+      "description": "TCP SYN cookies enabled",
+      "metadata": {
+        "current": "1",
+        "desired": "1",
+        "status": "ok"
+      },
+      "operational_error": false,
+      "category": "kernel_params",
+      "tags": [
+        "kernel",
+        "security",
+        "configuration"
+      ],
+      "risk_subscores": {
+        "impact": 0.13613282410778152,
+        "exposure": 0.07076107577627617,
+        "anomaly": 0.16056857497322624,
+        "confidence": 0.874544411084475
+      },
+      "correlation_refs": [],
+      "baseline_status": "existing",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.08595548661130187,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 10,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    },
+    "modules": {
+      "id": "module_ext4_28ff1b48",
+      "title": "Module ext4",
+      "severity": "info",
+      "risk_score": 10,
+      "base_severity_score": 10,
+      "description": "Loaded kernel module",
+      "metadata": {},
+      "operational_error": false,
+      "category": "modules",
+      "tags": [
+        "kernel",
+        "module",
+        "normal"
+      ],
+      "risk_subscores": {
+        "impact": 0.0488903519725545,
+        "exposure": 0.018320497179374735,
+        "anomaly": 0.10579999149287012,
+        "confidence": 0.9432645377182383
+      },
+      "correlation_refs": [],
+      "baseline_status": "existing",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.002516581452428484,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 10,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    },
+    "world_writable": {
+      "id": "file_capability_318e105a",
+      "title": "File capabilities binary",
+      "severity": "medium",
+      "risk_score": 50,
+      "base_severity_score": 50,
+      "description": "Binary has file capabilities set",
+      "metadata": {
+        "rule": "file_capability"
+      },
+      "operational_error": false,
+      "category": "world_writable",
+      "tags": [
+        "filesystem",
+        "capabilities",
+        "security"
+      ],
+      "risk_subscores": {
+        "impact": 0.6361394707623867,
+        "exposure": 0.37487474280602834,
+        "anomaly": 0.6733378181860583,
+        "confidence": 0.7833882716493413
+      },
+      "correlation_refs": [],
+      "baseline_status": "existing",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.46452950213433714,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 50,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    },
+    "suid": {
+      "id": "suid_12c10e0c",
+      "title": "SUID/SGID binary",
+      "severity": "medium",
+      "risk_score": 50,
+      "base_severity_score": 50,
+      "description": "Binary has SUID or SGID bit set",
+      "metadata": {
+        "expected": "false"
+      },
+      "operational_error": false,
+      "category": "suid",
+      "tags": [
+        "filesystem",
+        "permissions",
+        "suid",
+        "unexpected"
+      ],
+      "risk_subscores": {
+        "impact": 0.37319504479708976,
+        "exposure": 0.4305282359428734,
+        "anomaly": 0.5628984747753546,
+        "confidence": 0.9024405703114575
+      },
+      "correlation_refs": [],
+      "baseline_status": "existing",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.30238510989223627,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 50,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    },
+    "ioc": {
+      "id": "ioc_8251c2f1",
+      "title": "Process IOC Detected",
+      "severity": "info",
+      "risk_score": 10,
+      "base_severity_score": 10,
+      "description": "Normal process detected: /usr/bin/firefox",
+      "metadata": {
+        "command": "/usr/bin/firefox",
+        "pid": "8438",
+        "pattern_match": "false"
+      },
+      "operational_error": false,
+      "category": "ioc",
+      "tags": [
+        "process",
+        "ioc",
+        "normal"
+      ],
+      "risk_subscores": {
+        "impact": 0.023727406860991944,
+        "exposure": 0.018055798044876746,
+        "anomaly": 0.13903801297750631,
+        "confidence": 0.8450953013284499
+      },
+      "correlation_refs": [],
+      "baseline_status": "existing",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.005404687915006476,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 10,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    },
+    "mac": {
+      "id": "mac_apparmor_d597d90f",
+      "title": "AppArmor status",
+      "severity": "medium",
+      "risk_score": 50,
+      "base_severity_score": 50,
+      "description": "AppArmor detection",
+      "metadata": {
+        "complain_count": "0",
+        "enabled": "true",
+        "mode_line": "Y",
+        "profiles_seen": "325",
+        "unconfined_critical": "3"
+      },
+      "operational_error": false,
+      "category": "mac",
+      "tags": [
+        "mac",
+        "apparmor",
+        "security"
+      ],
+      "risk_subscores": {
+        "impact": 0.10352947609444113,
+        "exposure": 0.2183775793771156,
+        "anomaly": 0.22778275954936394,
+        "confidence": 0.8051820620420544
+      },
+      "correlation_refs": [],
+      "baseline_status": "existing",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.19664103449464543,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 50,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    }
+  }
+}

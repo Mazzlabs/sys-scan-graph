@@ -1,0 +1,11 @@
+import pandas as pd
+
+# Login using e.g. `huggingface-cli login` to access this dataset
+df = pd.read_json("hf://datasets/lakhera2023/devops-dataset-v1/devops_questions_hf_ready.json")
+
+df = pd.read_parquet("hf://datasets/joey234/mmlu-computer_security-neg/data/test-00000-of-00001-6fd79b57a9cd5760.parquet")
+
+df = pd.read_parquet("hf://datasets/joey234/mmlu-computer_security-verbal-neg-prepend/data/test-00000-of-00001-39063be050303afb.parquet")
+
+df = pd.read_parquet("hf://datasets/joey234/mmlu-computer_security-dev/data/dev-00000-of-00001-7cb458b056829a79.parquet")
+

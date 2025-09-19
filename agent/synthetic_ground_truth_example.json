@@ -1,0 +1,859 @@
+{
+  "version": "ground_truth_v1",
+  "enriched_findings": [
+    {
+      "id": "proc_9197_0",
+      "title": "Running process: gnome-shell",
+      "severity": "info",
+      "risk_score": 10,
+      "base_severity_score": 10,
+      "description": "Normal system process /usr/bin/gnome-shell is running with PID 9197",
+      "metadata": {
+        "pid": 9197,
+        "command": "/usr/bin/gnome-shell",
+        "user": "user",
+        "state": "S (sleeping)",
+        "ppid": 841
+      },
+      "operational_error": false,
+      "category": "processes",
+      "tags": [
+        "processes",
+        "baseline:existing",
+        "low_priority"
+      ],
+      "risk_subscores": {
+        "impact": 0.11,
+        "exposure": 0.06,
+        "anomaly": 0.14,
+        "confidence": 0.9
+      },
+      "correlation_refs": [],
+      "baseline_status": "existing",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.045,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 10,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    },
+    {
+      "id": "proc_1308_1",
+      "title": "Running process: bash",
+      "severity": "info",
+      "risk_score": 10,
+      "base_severity_score": 10,
+      "description": "Normal system process /usr/bin/bash is running with PID 1308",
+      "metadata": {
+        "pid": 1308,
+        "command": "/usr/bin/bash",
+        "user": "user",
+        "state": "S (sleeping)",
+        "ppid": 681
+      },
+      "operational_error": false,
+      "category": "processes",
+      "tags": [
+        "processes",
+        "baseline:new",
+        "low_priority"
+      ],
+      "risk_subscores": {
+        "impact": 0.16,
+        "exposure": 0.16,
+        "anomaly": 0.05,
+        "confidence": 0.77
+      },
+      "correlation_refs": [],
+      "baseline_status": "existing",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.043,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 10,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    },
+    {
+      "id": "proc_mal_20471_2",
+      "title": "Malicious process detected",
+      "severity": "high",
+      "risk_score": 80,
+      "base_severity_score": 80,
+      "description": "Process exhibiting malicious behavior: /home/user/.config/.malware",
+      "metadata": {
+        "pid": 20471,
+        "command": "/home/user/.config/.malware",
+        "user": "root",
+        "state": "R (running)",
+        "ppid": 1,
+        "deleted_executable": true,
+        "world_writable_executable": true
+      },
+      "operational_error": false,
+      "category": "processes",
+      "tags": [
+        "processes",
+        "baseline:new",
+        "high_priority",
+        "needs_attention"
+      ],
+      "risk_subscores": {
+        "impact": 0.64,
+        "exposure": 0.57,
+        "anomaly": 0.55,
+        "confidence": 0.79
+      },
+      "correlation_refs": [],
+      "baseline_status": "existing",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.742,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 80,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    },
+    {
+      "id": "proc_1118_3",
+      "title": "Running process: cron",
+      "severity": "info",
+      "risk_score": 10,
+      "base_severity_score": 10,
+      "description": "Normal system process /usr/sbin/cron is running with PID 1118",
+      "metadata": {
+        "pid": 1118,
+        "command": "/usr/sbin/cron",
+        "user": "user",
+        "state": "S (sleeping)",
+        "ppid": 341
+      },
+      "operational_error": false,
+      "category": "processes",
+      "tags": [
+        "processes",
+        "baseline:new",
+        "low_priority"
+      ],
+      "risk_subscores": {
+        "impact": 0.06,
+        "exposure": 0.17,
+        "anomaly": 0.2,
+        "confidence": 0.77
+      },
+      "correlation_refs": [],
+      "baseline_status": "new",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.156,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 10,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    },
+    {
+      "id": "proc_5724_4",
+      "title": "Running process: cron",
+      "severity": "info",
+      "risk_score": 10,
+      "base_severity_score": 10,
+      "description": "Normal system process /usr/sbin/cron is running with PID 5724",
+      "metadata": {
+        "pid": 5724,
+        "command": "/usr/sbin/cron",
+        "user": "user",
+        "state": "S (sleeping)",
+        "ppid": 49
+      },
+      "operational_error": false,
+      "category": "processes",
+      "tags": [
+        "processes",
+        "baseline:new",
+        "low_priority"
+      ],
+      "risk_subscores": {
+        "impact": 0.04,
+        "exposure": 0.05,
+        "anomaly": 0.03,
+        "confidence": 0.85
+      },
+      "correlation_refs": [],
+      "baseline_status": "new",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.17,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 10,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    },
+    {
+      "id": "net_normal_80_0",
+      "title": "Normal network service on port 80",
+      "severity": "info",
+      "risk_score": 10,
+      "base_severity_score": 10,
+      "description": "Standard service listening on port 80/tcp6",
+      "metadata": {
+        "port": 80,
+        "protocol": "tcp6",
+        "state": "LISTEN",
+        "local_address": "[::]:80",
+        "foreign_address": "0.0.0.0:0",
+        "inode": 43274
+      },
+      "operational_error": false,
+      "category": "network",
+      "tags": [
+        "network",
+        "baseline:new",
+        "low_priority"
+      ],
+      "risk_subscores": {
+        "impact": 0.05,
+        "exposure": 0.04,
+        "anomaly": 0.07,
+        "confidence": 0.89
+      },
+      "correlation_refs": [],
+      "baseline_status": "unknown",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.095,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 10,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    },
+    {
+      "id": "net_susp_4444_1",
+      "title": "Suspicious port 4444 open",
+      "severity": "medium",
+      "risk_score": 60,
+      "base_severity_score": 60,
+      "description": "Unusual port 4444 is listening, commonly associated with malware",
+      "metadata": {
+        "port": 4444,
+        "protocol": "tcp",
+        "state": "LISTEN",
+        "local_address": "0.0.0.0:4444",
+        "foreign_address": "0.0.0.0:0",
+        "inode": 875082,
+        "process": null
+      },
+      "operational_error": false,
+      "category": "network",
+      "tags": [
+        "network",
+        "baseline:existing",
+        "moderate_risk"
+      ],
+      "risk_subscores": {
+        "impact": 0.44,
+        "exposure": 0.43,
+        "anomaly": 0.58,
+        "confidence": 0.87
+      },
+      "correlation_refs": [],
+      "baseline_status": "existing",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.65,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 60,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    },
+    {
+      "id": "net_normal_80_2",
+      "title": "Normal network service on port 80",
+      "severity": "info",
+      "risk_score": 10,
+      "base_severity_score": 10,
+      "description": "Standard service listening on port 80/tcp6",
+      "metadata": {
+        "port": 80,
+        "protocol": "tcp6",
+        "state": "LISTEN",
+        "local_address": "[::]:80",
+        "foreign_address": "0.0.0.0:0",
+        "inode": 44301
+      },
+      "operational_error": false,
+      "category": "network",
+      "tags": [
+        "network",
+        "baseline:new",
+        "low_priority"
+      ],
+      "risk_subscores": {
+        "impact": 0.05,
+        "exposure": 0.15,
+        "anomaly": 0.2,
+        "confidence": 0.81
+      },
+      "correlation_refs": [],
+      "baseline_status": "existing",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.033,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 10,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    },
+    {
+      "id": "net_susp_12345_3",
+      "title": "Suspicious port 12345 open",
+      "severity": "medium",
+      "risk_score": 60,
+      "base_severity_score": 60,
+      "description": "Unusual port 12345 is listening, commonly associated with malware",
+      "metadata": {
+        "port": 12345,
+        "protocol": "tcp",
+        "state": "LISTEN",
+        "local_address": "0.0.0.0:12345",
+        "foreign_address": "0.0.0.0:0",
+        "inode": 351027,
+        "process": "/usr/bin/nc -l 12345"
+      },
+      "operational_error": false,
+      "category": "network",
+      "tags": [
+        "network",
+        "baseline:new",
+        "moderate_risk"
+      ],
+      "risk_subscores": {
+        "impact": 0.34,
+        "exposure": 0.37,
+        "anomaly": 0.27,
+        "confidence": 0.78
+      },
+      "correlation_refs": [],
+      "baseline_status": "unknown",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.541,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 60,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    },
+    {
+      "id": "net_normal_443_4",
+      "title": "Normal network service on port 443",
+      "severity": "info",
+      "risk_score": 10,
+      "base_severity_score": 10,
+      "description": "Standard service listening on port 443/tcp",
+      "metadata": {
+        "port": 443,
+        "protocol": "tcp",
+        "state": "LISTEN",
+        "local_address": "0.0.0.0:443",
+        "foreign_address": "0.0.0.0:0",
+        "inode": 11586
+      },
+      "operational_error": false,
+      "category": "network",
+      "tags": [
+        "network",
+        "baseline:new",
+        "low_priority"
+      ],
+      "risk_subscores": {
+        "impact": 0.06,
+        "exposure": 0.17,
+        "anomaly": 0.19,
+        "confidence": 0.89
+      },
+      "correlation_refs": [],
+      "baseline_status": "new",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.06,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 10,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    }
+  ],
+  "correlations": [],
+  "reductions": {
+    "module_summary": null,
+    "suid_summary": null,
+    "network_summary": null,
+    "top_findings": [
+      {
+        "id": "proc_9197_0",
+        "title": "Running process: gnome-shell",
+        "severity": "info",
+        "risk_score": 10,
+        "base_severity_score": 10,
+        "description": "Normal system process /usr/bin/gnome-shell is running with PID 9197",
+        "metadata": {
+          "pid": 9197,
+          "command": "/usr/bin/gnome-shell",
+          "user": "user",
+          "state": "S (sleeping)",
+          "ppid": 841
+        },
+        "operational_error": false,
+        "category": "processes",
+        "tags": [
+          "processes",
+          "baseline:existing",
+          "low_priority"
+        ],
+        "risk_subscores": {
+          "impact": 0.11,
+          "exposure": 0.06,
+          "anomaly": 0.14,
+          "confidence": 0.9
+        },
+        "correlation_refs": [],
+        "baseline_status": "existing",
+        "severity_source": "raw",
+        "allowlist_reason": null,
+        "probability_actionable": 0.045,
+        "graph_degree": null,
+        "cluster_id": null,
+        "rationale": null,
+        "risk_total": 10,
+        "host_role": null,
+        "host_role_rationale": null,
+        "metric_drift": null
+      },
+      {
+        "id": "proc_1308_1",
+        "title": "Running process: bash",
+        "severity": "info",
+        "risk_score": 10,
+        "base_severity_score": 10,
+        "description": "Normal system process /usr/bin/bash is running with PID 1308",
+        "metadata": {
+          "pid": 1308,
+          "command": "/usr/bin/bash",
+          "user": "user",
+          "state": "S (sleeping)",
+          "ppid": 681
+        },
+        "operational_error": false,
+        "category": "processes",
+        "tags": [
+          "processes",
+          "baseline:new",
+          "low_priority"
+        ],
+        "risk_subscores": {
+          "impact": 0.16,
+          "exposure": 0.16,
+          "anomaly": 0.05,
+          "confidence": 0.77
+        },
+        "correlation_refs": [],
+        "baseline_status": "existing",
+        "severity_source": "raw",
+        "allowlist_reason": null,
+        "probability_actionable": 0.043,
+        "graph_degree": null,
+        "cluster_id": null,
+        "rationale": null,
+        "risk_total": 10,
+        "host_role": null,
+        "host_role_rationale": null,
+        "metric_drift": null
+      },
+      {
+        "id": "proc_mal_20471_2",
+        "title": "Malicious process detected",
+        "severity": "high",
+        "risk_score": 80,
+        "base_severity_score": 80,
+        "description": "Process exhibiting malicious behavior: /home/user/.config/.malware",
+        "metadata": {
+          "pid": 20471,
+          "command": "/home/user/.config/.malware",
+          "user": "root",
+          "state": "R (running)",
+          "ppid": 1,
+          "deleted_executable": true,
+          "world_writable_executable": true
+        },
+        "operational_error": false,
+        "category": "processes",
+        "tags": [
+          "processes",
+          "baseline:new",
+          "high_priority",
+          "needs_attention"
+        ],
+        "risk_subscores": {
+          "impact": 0.64,
+          "exposure": 0.57,
+          "anomaly": 0.55,
+          "confidence": 0.79
+        },
+        "correlation_refs": [],
+        "baseline_status": "existing",
+        "severity_source": "raw",
+        "allowlist_reason": null,
+        "probability_actionable": 0.742,
+        "graph_degree": null,
+        "cluster_id": null,
+        "rationale": null,
+        "risk_total": 80,
+        "host_role": null,
+        "host_role_rationale": null,
+        "metric_drift": null
+      },
+      {
+        "id": "proc_1118_3",
+        "title": "Running process: cron",
+        "severity": "info",
+        "risk_score": 10,
+        "base_severity_score": 10,
+        "description": "Normal system process /usr/sbin/cron is running with PID 1118",
+        "metadata": {
+          "pid": 1118,
+          "command": "/usr/sbin/cron",
+          "user": "user",
+          "state": "S (sleeping)",
+          "ppid": 341
+        },
+        "operational_error": false,
+        "category": "processes",
+        "tags": [
+          "processes",
+          "baseline:new",
+          "low_priority"
+        ],
+        "risk_subscores": {
+          "impact": 0.06,
+          "exposure": 0.17,
+          "anomaly": 0.2,
+          "confidence": 0.77
+        },
+        "correlation_refs": [],
+        "baseline_status": "new",
+        "severity_source": "raw",
+        "allowlist_reason": null,
+        "probability_actionable": 0.156,
+        "graph_degree": null,
+        "cluster_id": null,
+        "rationale": null,
+        "risk_total": 10,
+        "host_role": null,
+        "host_role_rationale": null,
+        "metric_drift": null
+      },
+      {
+        "id": "proc_5724_4",
+        "title": "Running process: cron",
+        "severity": "info",
+        "risk_score": 10,
+        "base_severity_score": 10,
+        "description": "Normal system process /usr/sbin/cron is running with PID 5724",
+        "metadata": {
+          "pid": 5724,
+          "command": "/usr/sbin/cron",
+          "user": "user",
+          "state": "S (sleeping)",
+          "ppid": 49
+        },
+        "operational_error": false,
+        "category": "processes",
+        "tags": [
+          "processes",
+          "baseline:new",
+          "low_priority"
+        ],
+        "risk_subscores": {
+          "impact": 0.04,
+          "exposure": 0.05,
+          "anomaly": 0.03,
+          "confidence": 0.85
+        },
+        "correlation_refs": [],
+        "baseline_status": "new",
+        "severity_source": "raw",
+        "allowlist_reason": null,
+        "probability_actionable": 0.17,
+        "graph_degree": null,
+        "cluster_id": null,
+        "rationale": null,
+        "risk_total": 10,
+        "host_role": null,
+        "host_role_rationale": null,
+        "metric_drift": null
+      },
+      {
+        "id": "net_normal_80_0",
+        "title": "Normal network service on port 80",
+        "severity": "info",
+        "risk_score": 10,
+        "base_severity_score": 10,
+        "description": "Standard service listening on port 80/tcp6",
+        "metadata": {
+          "port": 80,
+          "protocol": "tcp6",
+          "state": "LISTEN",
+          "local_address": "[::]:80",
+          "foreign_address": "0.0.0.0:0",
+          "inode": 43274
+        },
+        "operational_error": false,
+        "category": "network",
+        "tags": [
+          "network",
+          "baseline:new",
+          "low_priority"
+        ],
+        "risk_subscores": {
+          "impact": 0.05,
+          "exposure": 0.04,
+          "anomaly": 0.07,
+          "confidence": 0.89
+        },
+        "correlation_refs": [],
+        "baseline_status": "unknown",
+        "severity_source": "raw",
+        "allowlist_reason": null,
+        "probability_actionable": 0.095,
+        "graph_degree": null,
+        "cluster_id": null,
+        "rationale": null,
+        "risk_total": 10,
+        "host_role": null,
+        "host_role_rationale": null,
+        "metric_drift": null
+      },
+      {
+        "id": "net_susp_4444_1",
+        "title": "Suspicious port 4444 open",
+        "severity": "medium",
+        "risk_score": 60,
+        "base_severity_score": 60,
+        "description": "Unusual port 4444 is listening, commonly associated with malware",
+        "metadata": {
+          "port": 4444,
+          "protocol": "tcp",
+          "state": "LISTEN",
+          "local_address": "0.0.0.0:4444",
+          "foreign_address": "0.0.0.0:0",
+          "inode": 875082,
+          "process": null
+        },
+        "operational_error": false,
+        "category": "network",
+        "tags": [
+          "network",
+          "baseline:existing",
+          "moderate_risk"
+        ],
+        "risk_subscores": {
+          "impact": 0.44,
+          "exposure": 0.43,
+          "anomaly": 0.58,
+          "confidence": 0.87
+        },
+        "correlation_refs": [],
+        "baseline_status": "existing",
+        "severity_source": "raw",
+        "allowlist_reason": null,
+        "probability_actionable": 0.65,
+        "graph_degree": null,
+        "cluster_id": null,
+        "rationale": null,
+        "risk_total": 60,
+        "host_role": null,
+        "host_role_rationale": null,
+        "metric_drift": null
+      },
+      {
+        "id": "net_normal_80_2",
+        "title": "Normal network service on port 80",
+        "severity": "info",
+        "risk_score": 10,
+        "base_severity_score": 10,
+        "description": "Standard service listening on port 80/tcp6",
+        "metadata": {
+          "port": 80,
+          "protocol": "tcp6",
+          "state": "LISTEN",
+          "local_address": "[::]:80",
+          "foreign_address": "0.0.0.0:0",
+          "inode": 44301
+        },
+        "operational_error": false,
+        "category": "network",
+        "tags": [
+          "network",
+          "baseline:new",
+          "low_priority"
+        ],
+        "risk_subscores": {
+          "impact": 0.05,
+          "exposure": 0.15,
+          "anomaly": 0.2,
+          "confidence": 0.81
+        },
+        "correlation_refs": [],
+        "baseline_status": "existing",
+        "severity_source": "raw",
+        "allowlist_reason": null,
+        "probability_actionable": 0.033,
+        "graph_degree": null,
+        "cluster_id": null,
+        "rationale": null,
+        "risk_total": 10,
+        "host_role": null,
+        "host_role_rationale": null,
+        "metric_drift": null
+      },
+      {
+        "id": "net_susp_12345_3",
+        "title": "Suspicious port 12345 open",
+        "severity": "medium",
+        "risk_score": 60,
+        "base_severity_score": 60,
+        "description": "Unusual port 12345 is listening, commonly associated with malware",
+        "metadata": {
+          "port": 12345,
+          "protocol": "tcp",
+          "state": "LISTEN",
+          "local_address": "0.0.0.0:12345",
+          "foreign_address": "0.0.0.0:0",
+          "inode": 351027,
+          "process": "/usr/bin/nc -l 12345"
+        },
+        "operational_error": false,
+        "category": "network",
+        "tags": [
+          "network",
+          "baseline:new",
+          "moderate_risk"
+        ],
+        "risk_subscores": {
+          "impact": 0.34,
+          "exposure": 0.37,
+          "anomaly": 0.27,
+          "confidence": 0.78
+        },
+        "correlation_refs": [],
+        "baseline_status": "unknown",
+        "severity_source": "raw",
+        "allowlist_reason": null,
+        "probability_actionable": 0.541,
+        "graph_degree": null,
+        "cluster_id": null,
+        "rationale": null,
+        "risk_total": 60,
+        "host_role": null,
+        "host_role_rationale": null,
+        "metric_drift": null
+      },
+      {
+        "id": "net_normal_443_4",
+        "title": "Normal network service on port 443",
+        "severity": "info",
+        "risk_score": 10,
+        "base_severity_score": 10,
+        "description": "Standard service listening on port 443/tcp",
+        "metadata": {
+          "port": 443,
+          "protocol": "tcp",
+          "state": "LISTEN",
+          "local_address": "0.0.0.0:443",
+          "foreign_address": "0.0.0.0:0",
+          "inode": 11586
+        },
+        "operational_error": false,
+        "category": "network",
+        "tags": [
+          "network",
+          "baseline:new",
+          "low_priority"
+        ],
+        "risk_subscores": {
+          "impact": 0.06,
+          "exposure": 0.17,
+          "anomaly": 0.19,
+          "confidence": 0.89
+        },
+        "correlation_refs": [],
+        "baseline_status": "new",
+        "severity_source": "raw",
+        "allowlist_reason": null,
+        "probability_actionable": 0.06,
+        "graph_degree": null,
+        "cluster_id": null,
+        "rationale": null,
+        "risk_total": 10,
+        "host_role": null,
+        "host_role_rationale": null,
+        "metric_drift": null
+      }
+    ],
+    "top_risks": null
+  },
+  "summaries": {
+    "executive_summary": "Security assessment identified 10 findings, including 1 high/critical severity issues.",
+    "analyst": null,
+    "consistency_findings": null,
+    "triage_summary": null,
+    "action_narrative": null,
+    "metrics": null,
+    "causal_hypotheses": null,
+    "attack_coverage": null
+  },
+  "actions": [
+    {
+      "id": "investigate_high_severity",
+      "title": "Investigate high-severity findings",
+      "description": "Review 1 high-severity security findings",
+      "priority": "high",
+      "severity": "high"
+    }
+  ],
+  "raw_reference": null,
+  "correlation_graph": null,
+  "followups": [],
+  "enrichment_results": {},
+  "multi_host_correlation": [],
+  "integrity": null
+}

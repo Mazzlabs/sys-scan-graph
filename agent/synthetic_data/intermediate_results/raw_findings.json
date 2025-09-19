@@ -1,0 +1,704 @@
+{
+  "processes": [
+    {
+      "id": "proc_7008_0",
+      "title": "Running process: systemd",
+      "severity": "info",
+      "risk_score": 10,
+      "base_severity_score": 10,
+      "description": "Normal system process /usr/bin/systemd is running with PID 7008",
+      "metadata": {
+        "pid": 7008,
+        "command": "/usr/bin/systemd",
+        "user": "root",
+        "state": "S (sleeping)",
+        "ppid": 95
+      },
+      "operational_error": false,
+      "category": "processes",
+      "tags": [
+        "processes",
+        "baseline:new",
+        "low_priority"
+      ],
+      "risk_subscores": {
+        "impact": 0.08,
+        "exposure": 0.2,
+        "anomaly": 0.08,
+        "confidence": 0.73
+      },
+      "correlation_refs": [],
+      "baseline_status": "unknown",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.113,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 10,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    },
+    {
+      "id": "proc_2302_1",
+      "title": "Running process: gnome-shell",
+      "severity": "info",
+      "risk_score": 10,
+      "base_severity_score": 10,
+      "description": "Normal system process /usr/bin/gnome-shell is running with PID 2302",
+      "metadata": {
+        "pid": 2302,
+        "command": "/usr/bin/gnome-shell",
+        "user": "user",
+        "state": "S (sleeping)",
+        "ppid": 821
+      },
+      "operational_error": false,
+      "category": "processes",
+      "tags": [
+        "processes",
+        "baseline:existing",
+        "low_priority"
+      ],
+      "risk_subscores": {
+        "impact": 0.13,
+        "exposure": 0.02,
+        "anomaly": 0.05,
+        "confidence": 0.8
+      },
+      "correlation_refs": [],
+      "baseline_status": "existing",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.051,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 10,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    },
+    {
+      "id": "proc_susp_17403_2",
+      "title": "Suspicious process detected",
+      "severity": "medium",
+      "risk_score": 50,
+      "base_severity_score": 50,
+      "description": "Process with suspicious command pattern: /usr/bin/nc -l 4444",
+      "metadata": {
+        "pid": 17403,
+        "command": "/usr/bin/nc -l 4444",
+        "user": "user",
+        "state": "R (running)",
+        "ppid": 837,
+        "pattern_match": true
+      },
+      "operational_error": false,
+      "category": "processes",
+      "tags": [
+        "processes",
+        "baseline:new",
+        "moderate_risk"
+      ],
+      "risk_subscores": {
+        "impact": 0.11,
+        "exposure": 0.22,
+        "anomaly": 0.37,
+        "confidence": 0.83
+      },
+      "correlation_refs": [],
+      "baseline_status": "unknown",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.592,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 50,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    }
+  ],
+  "suid": [
+    {
+      "id": "suid_100bbfa2",
+      "title": "SUID/SGID binary",
+      "severity": "high",
+      "risk_score": 80,
+      "base_severity_score": 80,
+      "description": "Binary has SUID or SGID bit set",
+      "metadata": {},
+      "operational_error": false,
+      "category": "suid",
+      "tags": [
+        "filesystem",
+        "permissions",
+        "suid",
+        "critical",
+        "vulnerability"
+      ],
+      "risk_subscores": {
+        "impact": 0.7973744752290721,
+        "exposure": 0.9177156197739855,
+        "anomaly": 0.9477720906099963,
+        "confidence": 0.8538981839434278
+      },
+      "correlation_refs": [],
+      "baseline_status": "existing",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.6885059136455675,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 80,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    },
+    {
+      "id": "suid_32a5af79",
+      "title": "SUID/SGID binary",
+      "severity": "low",
+      "risk_score": 30,
+      "base_severity_score": 30,
+      "description": "Binary has SUID or SGID bit set",
+      "metadata": {
+        "expected": "true"
+      },
+      "operational_error": false,
+      "category": "suid",
+      "tags": [
+        "filesystem",
+        "permissions",
+        "suid",
+        "normal"
+      ],
+      "risk_subscores": {
+        "impact": 0.21393332481317234,
+        "exposure": 0.3990595302770638,
+        "anomaly": 0.2677924528865252,
+        "confidence": 0.8203810389035369
+      },
+      "correlation_refs": [],
+      "baseline_status": "existing",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.1706960612283222,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 30,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    }
+  ],
+  "network": [
+    {
+      "id": "net_normal_5432_0",
+      "title": "Normal network service on port 5432",
+      "severity": "info",
+      "risk_score": 10,
+      "base_severity_score": 10,
+      "description": "Standard service listening on port 5432/tcp6",
+      "metadata": {
+        "port": 5432,
+        "protocol": "tcp6",
+        "state": "LISTEN",
+        "local_address": "[::]:5432",
+        "foreign_address": "0.0.0.0:0",
+        "inode": 30712
+      },
+      "operational_error": false,
+      "category": "network",
+      "tags": [
+        "network",
+        "baseline:new",
+        "low_priority"
+      ],
+      "risk_subscores": {
+        "impact": 0.11,
+        "exposure": 0.2,
+        "anomaly": 0.12,
+        "confidence": 0.71
+      },
+      "correlation_refs": [],
+      "baseline_status": "unknown",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.111,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 10,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    },
+    {
+      "id": "net_mal_17627_1",
+      "title": "Malicious C2 communication detected",
+      "severity": "critical",
+      "risk_score": 95,
+      "base_severity_score": 95,
+      "description": "Outbound connection to known malicious IP on port 17627",
+      "metadata": {
+        "port": 17627,
+        "protocol": "tcp",
+        "state": "ESTABLISHED",
+        "local_address": "192.168.1.230:35598",
+        "foreign_address": "203.0.113.116:17627",
+        "inode": 2580510,
+        "process": "/tmp/.backdoor",
+        "malicious_ip": true,
+        "c2_indicator": true
+      },
+      "operational_error": false,
+      "category": "network",
+      "tags": [
+        "network",
+        "baseline:existing",
+        "high_priority",
+        "needs_attention"
+      ],
+      "risk_subscores": {
+        "impact": 0.34,
+        "exposure": 0.7,
+        "anomaly": 0.11,
+        "confidence": 0.91
+      },
+      "correlation_refs": [],
+      "baseline_status": "unknown",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 1.0,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 95,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    },
+    {
+      "id": "net_normal_443_2",
+      "title": "Normal network service on port 443",
+      "severity": "info",
+      "risk_score": 10,
+      "base_severity_score": 10,
+      "description": "Standard service listening on port 443/tcp",
+      "metadata": {
+        "port": 443,
+        "protocol": "tcp",
+        "state": "LISTEN",
+        "local_address": "0.0.0.0:443",
+        "foreign_address": "0.0.0.0:0",
+        "inode": 61968
+      },
+      "operational_error": false,
+      "category": "network",
+      "tags": [
+        "network",
+        "baseline:new",
+        "low_priority"
+      ],
+      "risk_subscores": {
+        "impact": 0.13,
+        "exposure": 0.17,
+        "anomaly": 0.15,
+        "confidence": 0.71
+      },
+      "correlation_refs": [],
+      "baseline_status": "unknown",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.09,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 10,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    }
+  ],
+  "world_writable": [
+    {
+      "id": "world_writable_e3373bdf",
+      "title": "World-writable file",
+      "severity": "info",
+      "risk_score": 10,
+      "base_severity_score": 10,
+      "description": "File is world writable",
+      "metadata": {},
+      "operational_error": false,
+      "category": "world_writable",
+      "tags": [
+        "filesystem",
+        "permissions",
+        "normal"
+      ],
+      "risk_subscores": {
+        "impact": 0.02539267306060355,
+        "exposure": 0.060095820458965166,
+        "anomaly": 0.11424613541149548,
+        "confidence": 0.8525938342550702
+      },
+      "correlation_refs": [],
+      "baseline_status": "existing",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.04718145278595788,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 10,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    },
+    {
+      "id": "world_writable_260b32d5",
+      "title": "World-writable file",
+      "severity": "info",
+      "risk_score": 10,
+      "base_severity_score": 10,
+      "description": "File is world writable",
+      "metadata": {},
+      "operational_error": false,
+      "category": "world_writable",
+      "tags": [
+        "filesystem",
+        "permissions",
+        "normal"
+      ],
+      "risk_subscores": {
+        "impact": 0.04634116188277541,
+        "exposure": 0.06564473437228462,
+        "anomaly": 0.18512475017588875,
+        "confidence": 0.8071846185633067
+      },
+      "correlation_refs": [],
+      "baseline_status": "existing",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.027089962929982073,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 10,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    }
+  ],
+  "kernel_params": [
+    {
+      "id": "kernel_randomize_va_space_9468f03a",
+      "title": "randomize_va_space",
+      "severity": "info",
+      "risk_score": 10,
+      "base_severity_score": 10,
+      "description": "ASLR should be full (2)",
+      "metadata": {
+        "current": "1",
+        "desired": "1",
+        "status": "ok"
+      },
+      "operational_error": false,
+      "category": "kernel_params",
+      "tags": [
+        "kernel",
+        "security",
+        "configuration"
+      ],
+      "risk_subscores": {
+        "impact": 0.09199270247568296,
+        "exposure": 0.062088909702895226,
+        "anomaly": 0.1327874243082941,
+        "confidence": 0.8531215872779043
+      },
+      "correlation_refs": [],
+      "baseline_status": "existing",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.09059778675103897,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 10,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    },
+    {
+      "id": "kernel_randomize_va_space_9dc7718a",
+      "title": "randomize_va_space",
+      "severity": "info",
+      "risk_score": 10,
+      "base_severity_score": 10,
+      "description": "ASLR should be full (2)",
+      "metadata": {
+        "current": "1",
+        "desired": "1",
+        "status": "ok"
+      },
+      "operational_error": false,
+      "category": "kernel_params",
+      "tags": [
+        "kernel",
+        "security",
+        "configuration"
+      ],
+      "risk_subscores": {
+        "impact": 0.134326433976532,
+        "exposure": 0.04989448881214595,
+        "anomaly": 0.1483714430141464,
+        "confidence": 0.8552213425863755
+      },
+      "correlation_refs": [],
+      "baseline_status": "existing",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.08088419715019336,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 10,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    }
+  ],
+  "modules": [
+    {
+      "id": "module_coretemp_7f296035",
+      "title": "Module coretemp",
+      "severity": "info",
+      "risk_score": 10,
+      "base_severity_score": 10,
+      "description": "Loaded kernel module",
+      "metadata": {},
+      "operational_error": false,
+      "category": "modules",
+      "tags": [
+        "kernel",
+        "module",
+        "normal"
+      ],
+      "risk_subscores": {
+        "impact": 0.03377887210675528,
+        "exposure": 0.010372252425886555,
+        "anomaly": 0.129244478518537,
+        "confidence": 0.9623608432534969
+      },
+      "correlation_refs": [],
+      "baseline_status": "existing",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.004917729681752249,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 10,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    },
+    {
+      "id": "module_kvm_intel_41898730",
+      "title": "Module kvm_intel",
+      "severity": "info",
+      "risk_score": 10,
+      "base_severity_score": 10,
+      "description": "Loaded kernel module",
+      "metadata": {},
+      "operational_error": false,
+      "category": "modules",
+      "tags": [
+        "kernel",
+        "module",
+        "normal"
+      ],
+      "risk_subscores": {
+        "impact": 0.012669614615539806,
+        "exposure": 0.023782479122511708,
+        "anomaly": 0.081517927422385,
+        "confidence": 0.9237602874141264
+      },
+      "correlation_refs": [],
+      "baseline_status": "existing",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.002344099215179949,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 10,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    }
+  ],
+  "ioc": [
+    {
+      "id": "ioc_2639a146",
+      "title": "Process IOC Detected",
+      "severity": "low",
+      "risk_score": 30,
+      "base_severity_score": 30,
+      "description": "Process with suspicious patterns: /usr/bin/nmap",
+      "metadata": {
+        "command": "/usr/bin/nmap",
+        "pid": "9284",
+        "pattern_match": "true"
+      },
+      "operational_error": false,
+      "category": "ioc",
+      "tags": [
+        "process",
+        "ioc",
+        "suspicious",
+        "reconnaissance"
+      ],
+      "risk_subscores": {
+        "impact": 0.1920660554404851,
+        "exposure": 0.2859303237649423,
+        "anomaly": 0.4074129266133493,
+        "confidence": 0.7069736950725632
+      },
+      "correlation_refs": [],
+      "baseline_status": "existing",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.14399914467263292,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 30,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    },
+    {
+      "id": "ioc_dfa1aba1",
+      "title": "Process IOC Detected",
+      "severity": "info",
+      "risk_score": 10,
+      "base_severity_score": 10,
+      "description": "Normal process detected: /usr/bin/code",
+      "metadata": {
+        "command": "/usr/bin/code",
+        "pid": "8197",
+        "pattern_match": "false"
+      },
+      "operational_error": false,
+      "category": "ioc",
+      "tags": [
+        "process",
+        "ioc",
+        "normal"
+      ],
+      "risk_subscores": {
+        "impact": 0.035968653876404626,
+        "exposure": 0.011753099466291144,
+        "anomaly": 0.09506411590535607,
+        "confidence": 0.8083301073083802
+      },
+      "correlation_refs": [],
+      "baseline_status": "existing",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.0017259997591106996,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 10,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    }
+  ],
+  "mac": [
+    {
+      "id": "mac_apparmor_f907de1c",
+      "title": "AppArmor status",
+      "severity": "medium",
+      "risk_score": 50,
+      "base_severity_score": 50,
+      "description": "AppArmor detection",
+      "metadata": {
+        "complain_count": "5",
+        "enabled": "true",
+        "mode_line": "Y",
+        "profiles_seen": "447",
+        "unconfined_critical": "1"
+      },
+      "operational_error": false,
+      "category": "mac",
+      "tags": [
+        "mac",
+        "apparmor",
+        "security"
+      ],
+      "risk_subscores": {
+        "impact": 0.29023436225888344,
+        "exposure": 0.2651988703669629,
+        "anomaly": 0.2931039067503489,
+        "confidence": 0.861501643403176
+      },
+      "correlation_refs": [],
+      "baseline_status": "existing",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.1552226481008981,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 50,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    },
+    {
+      "id": "mac_selinux_c10ff5bb",
+      "title": "SELinux status",
+      "severity": "low",
+      "risk_score": 30,
+      "base_severity_score": 30,
+      "description": "SELinux detection",
+      "metadata": {
+        "present": "false"
+      },
+      "operational_error": false,
+      "category": "mac",
+      "tags": [
+        "mac",
+        "selinux",
+        "security"
+      ],
+      "risk_subscores": {
+        "impact": 0.2891054044567023,
+        "exposure": 0.2114619731704748,
+        "anomaly": 0.43003717917244383,
+        "confidence": 0.8686987777904991
+      },
+      "correlation_refs": [],
+      "baseline_status": "existing",
+      "severity_source": "raw",
+      "allowlist_reason": null,
+      "probability_actionable": 0.16367175736217607,
+      "graph_degree": null,
+      "cluster_id": null,
+      "rationale": null,
+      "risk_total": 30,
+      "host_role": null,
+      "host_role_rationale": null,
+      "metric_drift": null
+    }
+  ]
+}

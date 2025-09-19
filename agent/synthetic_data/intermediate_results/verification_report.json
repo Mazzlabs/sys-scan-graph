@@ -1,0 +1,59 @@
+{
+  "timestamp": "2025-09-19T03:44:03.219184",
+  "overall_status": "passed",
+  "stages": {
+    "schema_validation": {
+      "status": "passed",
+      "passed": true,
+      "total_findings": 21,
+      "valid_findings": 21,
+      "invalid_findings": 0,
+      "invalid_details": []
+    },
+    "consistency_check": {
+      "status": "passed",
+      "passed": true,
+      "issues_found": 0,
+      "issues": [],
+      "duplicate_ids": 0,
+      "severity_inconsistencies": 0,
+      "broken_correlations": 0
+    },
+    "realism_assessment": {
+      "status": "passed",
+      "passed": true,
+      "realism_score": 0.8026666666666668,
+      "issues": [
+        "info: expected 40.0%, got 61.1% (deviation: 21.1%)"
+      ]
+    },
+    "correlation_validation": {
+      "status": "passed",
+      "passed": true,
+      "correlation_quality_score": 0.7694444444444445,
+      "issues": []
+    },
+    "quality_scoring": {
+      "status": "warning",
+      "passed": false,
+      "overall_quality_score": 0.6902708109794715,
+      "quality_metrics": {
+        "diversity_score": 0.875,
+        "completeness_score": 1.0,
+        "consistency_score": 0.6083054661401082,
+        "correlation_coverage": 0.2777777777777778
+      }
+    }
+  },
+  "summary": {
+    "total_findings": 18,
+    "total_correlations": 3,
+    "scanner_coverage": 8,
+    "stages_passed": 4,
+    "stages_failed": 0,
+    "stages_warning": 1
+  },
+  "recommendations": [
+    ".2f"
+  ]
+}
